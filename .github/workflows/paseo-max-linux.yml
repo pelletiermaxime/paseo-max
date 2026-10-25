@@ -6,14 +6,20 @@ on:
       version:
         description: "Fork package version (for example 0.13.0-max.1)"
         required: true
-        default: "0.13.0-max.1"
+        default: "0.13.0-max.2"
+        type: string
+      source_run_id:
+        description: "Promote an existing successful package artifact; leave blank for a fresh build"
+        required: false
+        default: ""
         type: string
 
 permissions:
-  contents: read
+  contents: write
+  actions: read
 
 concurrency:
-  group: paseo-max-linux-${{ github.ref }}
+  group: paseo-max-linux-${{ inputs.version }}
   cancel-in-progress: false
 
 jobs:
@@ -24,6 +30,7 @@ jobs:
       ONNXRUNTIME_NODE_INSTALL: skip
       NODE_OPTIONS: --max-old-space-size=6144
       BUILD_VERSION: ${{ inputs.version }}
+      SOURCE_RUN_ID: ${{ inputs.source_run_id }}
       PASEO_PACKAGED_EXECUTABLE: PaseoMax
       PASEO_DESKTOP_SMOKE: "1"
       EP_GH_IGNORE_TIME: true
@@ -31,22 +38,46 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        if: inputs.source_run_id == ''
         with:
           node-version: "22"
           cache: npm
 
       - name: Validate package version
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
           if (!/^\d+\.\d+\.\d+-max\.[1-9]\d*$/.test(process.env.BUILD_VERSION)) {
             throw new Error('Expected a fork version such as 0.13.0-max.1');
           }
+          if (process.env.SOURCE_RUN_ID && !/^\d+$/.test(process.env.SOURCE_RUN_ID)) {
+            throw new Error('Expected a numeric source run ID');
+          }
+          const tag = `paseo-max-v${process.env.BUILD_VERSION}`;
+          const refs = JSON.parse(execFileSync('gh', ['api',
+            `repos/${process.env.GITHUB_REPOSITORY}/git/matching-refs/tags/${tag}`], { encoding: 'utf8' }));
+          if (refs.some(ref => ref.ref === `refs/tags/${tag}`)) {
+            throw new Error(`${tag} already exists. Choose a new fork version; published builds are never overwritten.`);
+          }
+          if (process.env.SOURCE_RUN_ID) {
+            const run = JSON.parse(execFileSync('gh', ['api',
+              `repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.SOURCE_RUN_ID}`], { encoding: 'utf8' }));
+            if (run.conclusion !== 'success' || run.path !== '.github/workflows/paseo-max-linux.yml') {
+              throw new Error('Promotion requires a successful Paseo Max Linux Build run');
+            }
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV, `RELEASE_TAG=${tag}\n`);
           NODE
 
       - name: Install dependencies
+        if: inputs.source_run_id == ''
         run: node scripts/npm-retry.mjs ci
 
       - name: Set build versions
+        if: inputs.source_run_id == ''
         # Keep the desktop and bundled daemon versions equal without publishing packages.
         run: |
           node --input-type=module <<'NODE'
@@ -62,14 +93,17 @@ jobs:
           NODE
 
       - name: Install Linux packaging and smoke dependencies
+        if: inputs.source_run_id == ''
         run: sudo apt-get update && sudo apt-get install -y xvfb xauth rpm
 
       - name: Build and smoke Linux x64 packages
+        if: inputs.source_run_id == ''
         env:
           PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/desktop-smoke
         run: npm run build:desktop -- --publish never --linux --x64 --config electron-builder.max.yml
 
       - name: Record checksums and build provenance
+        if: inputs.source_run_id == ''
         run: |
           cd packages/desktop/release
           sha256sum *.AppImage *.deb *.rpm *.tar.gz > SHA256SUMS
@@ -77,6 +111,7 @@ jobs:
             "$BUILD_VERSION" "$GITHUB_SHA" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > BUILD.txt
 
       - name: Upload Linux packages
+        if: inputs.source_run_id == ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: paseo-max-linux-x64-${{ inputs.version }}
@@ -91,8 +126,77 @@ jobs:
           retention-days: 14
           compression-level: 0
 
+      - name: Download existing successful build
+        if: inputs.source_run_id != ''
+        uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ inputs.source_run_id }}
+          name: paseo-max-linux-x64-${{ inputs.version }}
+          path: packages/desktop/release
+
+      - name: Verify packages and source commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd packages/desktop/release
+          sha256sum -c SHA256SUMS
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
+          const runId = process.env.SOURCE_RUN_ID || process.env.GITHUB_RUN_ID;
+          const run = JSON.parse(execFileSync('gh', ['api',
+            `repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}`], { encoding: 'utf8' }));
+          const expected = `Paseo Max ${process.env.BUILD_VERSION}\nSource: ${run.head_sha}\nBuild: ${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${runId}\n`;
+          if (fs.readFileSync('BUILD.txt', 'utf8') !== expected) {
+            throw new Error('Package provenance does not match the selected build/version');
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV, `RELEASE_SOURCE_SHA=${run.head_sha}\n`);
+          NODE
+
+      - name: Publish Linux prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd packages/desktop/release
+          cat > "$RUNNER_TEMP/release-notes.md" <<EOF
+          Experimental Paseo Max desktop build, based on upstream Paseo v${BUILD_VERSION%-max.*}.
+
+          Inactive workspace browser hibernation, keep-awake pins, and faded sleeping tabs.
+          A compatible plugin must configure the hibernation policy; the workflow plugin is separate.
+
+          Linux x64 packages: AppImage, portable tar.gz, Debian and RPM. The tarball runs without installation: extract it and launch PaseoMax.
+
+          Separate state: ~/.config/Paseo Max and ~/.paseo-max; daemon address 127.0.0.1:17678.
+          Automatic updates and global paseo CLI installation are disabled.
+
+          The packaged-app smoke check passed (renderer/preload, bundled daemon, built-in plugins, CLI and terminal). The complete hibernation user journey was not replayed in this build.
+
+          Source commit: $RELEASE_SOURCE_SHA
+          Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${SOURCE_RUN_ID:-$GITHUB_RUN_ID}
+
+          Verify downloads with SHA256SUMS. BUILD.txt records the source and build run.
+          EOF
+          gh release create "$RELEASE_TAG" *.AppImage *.deb *.rpm *.tar.gz SHA256SUMS BUILD.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SOURCE_SHA" \
+            --title "Paseo Max $BUILD_VERSION — Linux x64" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" --draft --prerelease --latest=false
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets > "$RUNNER_TEMP/release.json"
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const release = JSON.parse(fs.readFileSync(`${process.env.RUNNER_TEMP}/release.json`, 'utf8'));
+          const files = fs.readdirSync('.').filter(name => /\.(AppImage|deb|rpm|tar\.gz)$/.test(name) || ['SHA256SUMS', 'BUILD.txt'].includes(name));
+          if (files.length !== 6 || release.assets.length !== 6 || files.some(name => !release.assets.some(asset => asset.name === name && asset.size === fs.statSync(name).size))) {
+            throw new Error('Published assets do not match the six verified package/provenance files');
+          }
+          const url = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/releases/tag/${process.env.RELEASE_TAG}`;
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Linux prerelease\n\n${url}\n\n| Asset | Bytes |\n|---|---:|\n${release.assets.map(asset => `| ${asset.name} | ${asset.size} |`).join('\n')}\n`);
+          console.log(JSON.stringify(release));
+          NODE
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+
       - name: Upload smoke diagnostics
-        if: always()
+        if: always() && inputs.source_run_id == ''
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: paseo-max-linux-smoke
