@@ -115,6 +115,18 @@ contextBridge.exposeInMainWorld("paseoDesktop", {
       ipcRenderer.invoke("paseo:menu:set-capturing-shortcut", capturing),
   },
   browser: {
+    setWorkspaceVisibility: (input: { workspaceId: string; visible: boolean }) =>
+      ipcRenderer.invoke("paseo:browser:workspace-visibility", input),
+    prepareHibernation: (input: { browserId: string; attemptId: string }) =>
+      ipcRenderer.invoke("paseo:browser:prepare-hibernation", input),
+    hibernate: (attemptId: string) => ipcRenderer.invoke("paseo:browser:hibernate", attemptId),
+    cancelHibernation: (attemptId: string) =>
+      ipcRenderer.invoke("paseo:browser:cancel-hibernation", attemptId),
+    onHibernated: (handler: EventHandler) => {
+      const listener = (_event: Electron.IpcRendererEvent, payload: unknown) => handler(payload);
+      ipcRenderer.on("paseo:browser:hibernated", listener);
+      return () => ipcRenderer.removeListener("paseo:browser:hibernated", listener);
+    },
     setShortcutPolicy: (input: BrowserKeyboardPolicy) =>
       ipcRenderer.invoke("paseo:browser:set-shortcut-policy", input),
     profilePartition: PASEO_BROWSER_PROFILE_PARTITION,

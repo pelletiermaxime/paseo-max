@@ -582,6 +582,7 @@ export const fr: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "En veille",
       unavailable: {
         title: "Le navigateur est réservé à l’app de bureau",
         subtitle: "Ouvrez cet espace de travail dans Electron pour utiliser le navigateur intégré.",
@@ -593,6 +594,8 @@ export const fr: TranslationResources = {
         stopLoading: "Arrêter le chargement",
         refresh: "Actualiser",
         browserUrl: "URL du navigateur",
+        keepAwake: "Garder cet onglet actif",
+        allowHibernation: "Autoriser la mise en veille de cet onglet",
         enterUrl: "Saisir une URL",
         openDevTools: "Ouvrir les outils de développement du navigateur",
         cancelSelector: "Annuler la sélection d’élément",
