@@ -91,6 +91,9 @@ never deletes it. The global `pluginsEnabled` switch remains available.
 Client plugins can request desktop browser hibernation with the optional
 [`workspaceResources` API](../public-docs/plugins/reference.md#hibernate-inactive-workspace-browsers).
 
+Paseo Max's optional [`addSidebarFooterIcon` API](../public-docs/plugins/reference.md#compact-footer-icons-in-paseo-max)
+contributes to the shared fixed bottom icon row. Keep full-width footer rows on `addSidebarFooterItem`.
+
 ## Client translations
 
 Plugin runtime translations follow the connected app, so never send a daemon locale through RPCs or add plugin resources to the app catalog. The installation owns the translation engine; native portal bridges must carry it alongside RPC and client-state contexts. Keep host label resolution at presentation time so language changes preserve the installation lifetime.

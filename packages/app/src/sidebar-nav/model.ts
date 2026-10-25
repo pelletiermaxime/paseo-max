@@ -5,7 +5,7 @@ export type SidebarSection = PluginSidebarSection;
 
 /**
  * Each section's built-in items in their default order. The footer's bottom line
- * (Add project and the Hosts, Help and support, Settings icons) is fixed.
+ * keeps its built-in actions fixed; plugin icons share footer preferences with rows.
  */
 export const BUILTIN_SIDEBAR_ITEM_IDS = {
   header: ["new-workspace", "history", "search", "schedules"],
@@ -77,9 +77,10 @@ function builtinVisibleByDefault(id: BuiltinSidebarItemId): boolean {
 }
 
 export function pluginSidebarNavKey(
-  group: Pick<PluginSidebarGroup, "pluginId" | "contributionId">,
+  group: Pick<PluginSidebarGroup, "pluginId" | "contributionId" | "kind">,
 ): string {
-  return `plugin:${group.pluginId}:${group.contributionId}`;
+  const prefix = group.kind === "icon" ? "plugin-icon" : "plugin";
+  return `${prefix}:${group.pluginId}:${group.contributionId}`;
 }
 
 function isBuiltinSidebarItemId<Section extends SidebarSection>(

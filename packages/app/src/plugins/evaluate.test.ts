@@ -30,6 +30,88 @@ function bundle(body: string): string {
 }
 
 describe("evaluatePluginClientBundle", () => {
+  it("registers footer icons separately from rows and releases every registration", async () => {
+    const plugin = evaluatePluginClientBundle(
+      "usage",
+      bundle(`
+      const icon = { id: "usage", title: " Usage ", icon: "ChartNoAxesCombined", onPress() {} };
+      const remove = plugin.addSidebarFooterIcon(icon);
+      remove(); remove();
+      plugin.addSidebarFooterIcon(icon);
+      plugin.addSidebarFooterItem({ id: "usage", title: "Usage row", Component() { return null; } });
+    `),
+    );
+    expect(plugin.sidebarFooterIcons).toMatchObject([
+      { id: "usage", title: "Usage", icon: "ChartNoAxesCombined" },
+    ]);
+    expect(plugin.sidebarItems.footer).toHaveLength(1);
+    await plugin.cleanup();
+    await plugin.cleanup();
+    expect(plugin.sidebarFooterIcons).toEqual([]);
+    expect(plugin.sidebarItems.footer).toEqual([]);
+  });
+
+  it.each([
+    ['id: "usage"', 'id: "Bad"', "sidebar footer icon id"],
+    ['title: "Usage"', 'title: " "', "no title"],
+    ['icon: "ChartNoAxesCombined"', 'icon: ""', "icon"],
+    [
+      'icon: "ChartNoAxesCombined"',
+      'icon: { svg: "<svg><script>run()</script></svg>" }',
+      "script elements",
+    ],
+    ["onPress() {}", "onPress: null", "no callback"],
+  ])("validates footer icons: %s", (from, to, message) => {
+    const registration =
+      '{ id: "usage", title: "Usage", icon: "ChartNoAxesCombined", onPress() {} }';
+    expect(() =>
+      evaluatePluginClientBundle(
+        "usage",
+        bundle(`plugin.addSidebarFooterIcon(${registration.replace(from, to)})`),
+      ),
+    ).toThrow(message);
+  });
+
+  it("rejects duplicate footer icons", () => {
+    expect(() =>
+      evaluatePluginClientBundle(
+        "usage",
+        bundle(`
+      const icon = { id: "usage", title: "Usage", icon: "Activity", onPress() {} };
+      plugin.addSidebarFooterIcon(icon); plugin.addSidebarFooterIcon(icon);
+    `),
+      ),
+    ).toThrow("Duplicate sidebar footer icon: usage");
+  });
+
+  it("publishes late footer icon changes and forbids registration after unload", async () => {
+    let changes = 0;
+    const plugin = runPluginClientBundle(
+      "usage",
+      bundle(`
+      let remove;
+      plugin.addCommandCenterItem({ id: "add", title: "Add", icon: "Activity", context: "global", onSelect() {
+        remove = plugin.addSidebarFooterIcon({ id: "usage", title: "Usage", icon: "Activity", onPress() {} });
+      } });
+      plugin.addCommandCenterItem({ id: "remove", title: "Remove", icon: "Activity", context: "global", onSelect() { remove(); } });
+    `),
+      runtime,
+      () => {
+        changes++;
+      },
+    );
+    const [add, remove] = plugin.commandCenterItems;
+    await add.onSelect({} as never);
+    expect(changes).toBe(1);
+    expect(plugin.sidebarFooterIcons).toHaveLength(1);
+    await remove.onSelect({} as never);
+    expect(changes).toBe(2);
+    await add.onSelect({} as never);
+    await plugin.cleanup();
+    expect(plugin.sidebarFooterIcons).toEqual([]);
+    expect(() => add.onSelect({} as never)).toThrow("Plugin has stopped");
+  });
+
   it("releases button registrations when client setup throws", () => {
     let active = 0;
     function addButton() {
