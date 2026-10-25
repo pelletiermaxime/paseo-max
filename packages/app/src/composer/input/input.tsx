@@ -115,6 +115,10 @@ export interface ComposerKeyPressEvent {
   key: string;
   /** Shift, Alt, Ctrl, or Meta was held. */
   hasModifier: boolean;
+  shiftKey?: boolean;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
   preventDefault: () => void;
   input: ComposerInputSnapshot;
 }
@@ -421,6 +425,10 @@ function handleDesktopKeyPressImpl(
     const handled = ctx.onKeyPressCallback({
       key: event.nativeEvent.key,
       hasModifier: Boolean(shiftKey || metaKey || ctrlKey || altKey),
+      shiftKey: event.nativeEvent.shiftKey,
+      metaKey: event.nativeEvent.metaKey,
+      ctrlKey: event.nativeEvent.ctrlKey,
+      altKey: event.nativeEvent.altKey,
       preventDefault: () => event.preventDefault(),
       input: ctx.input,
     });
@@ -1440,7 +1448,9 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
         selectionRef.current = selection;
         textInputRef.current?.replaceText(textReplacement.text, selection);
       } else {
-        textInputRef.current?.replaceText(textReplacement.text);
+        const selection = { start: textReplacement.text.length, end: textReplacement.text.length };
+        selectionRef.current = selection;
+        textInputRef.current?.replaceText(textReplacement.text, selection);
       }
     }, [textReplacement, updateComposerHeightForText, updateLiveTextPresence]);
 
@@ -1741,12 +1751,10 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
       [onSelectionChangeCallback],
     );
 
-    const shouldHandleWebKeyPress = isWeb;
     const shouldSubmitOnEnter = isWeb && !isCompact;
 
     const handleDesktopKeyPress = useCallback(
       (event: WebTextInputKeyPressEvent) => {
-        if (!shouldHandleWebKeyPress) return;
         handleDesktopKeyPressImpl(event, {
           onKeyPressCallback,
           input: getComposerInputSnapshot(
@@ -1763,7 +1771,6 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
         });
       },
       [
-        shouldHandleWebKeyPress,
         onKeyPressCallback,
         shouldSubmitOnEnter,
         isSubmitDisabled,
@@ -2030,7 +2037,7 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
             editable={!isDictating && !isRealtimeVoiceForCurrentAgent && !disabled}
             scrollEnabled={isComposerScrollEnabled}
             autoFocus={false}
-            onKeyPress={shouldHandleWebKeyPress ? handleDesktopKeyPress : undefined}
+            onKeyPress={handleDesktopKeyPress}
             onSelectionChange={handleSelectionChange}
             onPasteImages={onPasteImages}
             onPasteError={handlePasteError}
@@ -2061,7 +2068,6 @@ export const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
         isRealtimeVoiceForCurrentAgent,
         disabled,
         isComposerScrollEnabled,
-        shouldHandleWebKeyPress,
         handleDesktopKeyPress,
         handleSelectionChange,
         onPasteImages,

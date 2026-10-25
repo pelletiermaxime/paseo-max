@@ -59,6 +59,7 @@ export interface AgentInputDraft {
   textSource: ComposerTextSource;
   editText: (text: string) => void;
   replaceText: (text: string) => void;
+  insertTextIfEmpty: (text: string) => boolean;
   textReplacement: TextReplacement;
   attachments: UserComposerAttachment[];
   setAttachments: (updater: AttachmentUpdater) => void;
@@ -179,6 +180,18 @@ export function useAgentInputDraft(input: UseAgentInputDraftInput): AgentInputDr
       publishTextReplacement("replace", nextText);
     },
     [draftKey, publishTextReplacement, textPublication],
+  );
+
+  const insertTextIfEmpty = useCallback(
+    (text: string): boolean => {
+      // Web edits can still be waiting for paint. Publish them before testing emptiness.
+      textPublication.flush();
+      const current = useDraftStore.getState().getDraftInput(draftKey);
+      if (current && (current.text.length > 0 || current.attachments.length > 0)) return false;
+      replaceText(text);
+      return true;
+    },
+    [draftKey, replaceText, textPublication],
   );
 
   const setAttachments = useCallback(
@@ -352,6 +365,7 @@ export function useAgentInputDraft(input: UseAgentInputDraftInput): AgentInputDr
     textSource,
     editText,
     replaceText,
+    insertTextIfEmpty,
     textReplacement,
     attachments,
     setAttachments,

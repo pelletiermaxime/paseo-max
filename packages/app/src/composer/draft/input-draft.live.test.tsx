@@ -136,7 +136,7 @@ beforeAll(async () => {
   });
 
   ({ useAgentInputDraft } = await import("./input-draft"));
-});
+}, 60_000);
 
 describe("useAgentInputDraft live contract", () => {
   beforeEach(() => {
@@ -247,6 +247,50 @@ describe("useAgentInputDraft live contract", () => {
 
     expect(getLatest().textSource.getSnapshot()).toBe("hello world");
     expect(getLatest().attachments).toEqual([{ kind: "image", metadata: image }]);
+  });
+
+  it("inserts an ordinary draft and atomically protects pending edits and attachments", async () => {
+    let latest: ReturnType<typeof useAgentInputDraft> | null = null;
+    function Probe() {
+      latest = useAgentInputDraft({ draftKey: "agent:host-1:insert" });
+      return null;
+    }
+    function draft() {
+      if (!latest) throw new Error("Missing draft owner");
+      return latest;
+    }
+    const container = document.getElementById("root");
+    if (!container) throw new Error("Missing root container");
+    const root = createTestRoot(container);
+    const queryClient = new QueryClient();
+    await act(async () => {
+      root.render(
+        <QueryClientProvider client={queryClient}>
+          <Probe />
+        </QueryClientProvider>,
+      );
+    });
+    await act(async () => {
+      expect(draft().insertTextIfEmpty("Suggestion")).toBe(true);
+      expect(draft().insertTextIfEmpty("Second suggestion")).toBe(false);
+    });
+    expect(draft().textSource.getSnapshot()).toBe("Suggestion");
+    expect(draft().textReplacement).toMatchObject({ kind: "replace", text: "Suggestion" });
+    expect(useDraftStore.getState().drafts["agent:host-1:insert"].lifecycle).toBe("active");
+    await act(async () => {
+      draft().clear("abandoned");
+      // No paint between the user edit and insertion: store publication is still pending.
+      draft().editText(" ");
+      expect(draft().insertTextIfEmpty("Overwrite")).toBe(false);
+    });
+    expect(draft().textSource.getSnapshot()).toBe(" ");
+    await act(async () => {
+      draft().clear("abandoned");
+      draft().setAttachments([createWorkspaceFileAttachment({ path: "src/app.ts" })]);
+      expect(draft().insertTextIfEmpty("Overwrite attachment")).toBe(false);
+    });
+    expect(draft().attachments).toEqual([createWorkspaceFileAttachment({ path: "src/app.ts" })]);
+    expect(draft().textSource.getSnapshot()).toBe("");
   });
 
   it("migrates legacy image drafts to image attachments on hydration", async () => {

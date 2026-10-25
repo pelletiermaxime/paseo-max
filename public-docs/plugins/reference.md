@@ -1535,6 +1535,63 @@ not import `lucide-react-native` or `react-native-svg`.
 
 An unknown name or an SVG that breaks a rule renders nothing.
 
+### Show a composer suggestion in Paseo Max
+
+`client.composer?.suggestText({ serverId, agentId, text })` displays a faint suggestion
+inside the active agent composer in this app window. It does not change the draft or enable
+Send. The user accepts it with unmodified **Tab** or **Right Arrow** while the composer is
+focused, then edits and sends normally. **Escape** dismisses it; typing dismisses it and keeps
+the user's own input. Touch acceptance is not provided yet.
+
+Feature-detect `client.composer`: older apps omit this capability. This is a client capability, not a daemon `server_info.features` flag.
+`PluginComposer`, `PluginComposerSuggestionResult` and `PluginComposerSuggestionInput` are exported
+from `@getpaseo/plugin/client`.
+
+Call it when your plugin has a suggestion and the target composer is mounted. Generation,
+model calls, caching and triggers stay in your plugin. A minimal consumer is:
+
+```tsx
+import type { PluginClientContext } from "@getpaseo/plugin/client";
+
+export async function showSuggestedFollowUp(
+  client: PluginClientContext,
+  target: { serverId: string; agentId: string },
+  suggestedPrompt: string,
+): Promise<() => void> {
+  if (!client.composer) return () => {}; // Older app: feature unavailable.
+  const result = await client.composer.suggestText({ ...target, text: suggestedPrompt });
+  if (result.status !== "suggested") {
+    // draft-not-empty, composer-unavailable, or submission-in-progress:
+    // keep the user's composer untouched; present any explanation in your plugin.
+    return () => {};
+  }
+  return result.remove; // Call when your suggestion becomes obsolete.
+}
+```
+
+A successful result is `{ status: "suggested", remove() }`. The removal function affects only
+that suggestion; it cannot remove a newer plugin's suggestion or an accepted draft. A newer
+suggestion replaces the transient suggestion. Suggestions disappear on plugin unload, composer
+unmount/navigation, attachments, or submission; they are never persisted or replayed on return.
+An accepted suggestion uses normal draft persistence. Reloading discards an unaccepted suggestion.
+
+Showing and accepting both check the live draft and submission state. Any text (including
+whitespace), attachment, or pending upload prevents acceptance. The operation uses the exact
+`serverId` and `agentId` in this app runtime only; it never opens a workspace, switches agents,
+steals focus, opens a keyboard, or broadcasts to another window or phone. The shared composer
+renders the suggestion on web, desktop, iOS and Android; keyboard acceptance is the current
+interaction. An empty string or blank IDs reject with `TypeError`; unexpected failures reject
+normally. Expected refusals resolve to `{ status }`:
+
+| Status                   | Meaning                                                                                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `draft-not-empty`        | Text, attachments, or pending uploads prevent showing or accepting. The draft stays untouched.                                                                                |
+| `composer-unavailable`   | The exact host/agent composer is unavailable, disconnected, inactive, covered, archived, hydrating, ambiguous, or changed before delivery; also returned after plugin unload. |
+| `submission-in-progress` | The composer is submitting a message.                                                                                                                                         |
+
+Exactly one active composer must match both IDs. A request whose composer unmounts or changes
+before delivery is refused, even if another composer for the same conversation mounts.
+
 ## Timeline items
 
 A plugin can replace an agent timeline entry with its own data and React Native renderer. Both
