@@ -32,6 +32,10 @@ if [ -d "${MACOS_DIR}" ]; then
     exit 1
   fi
   APP_EXECUTABLE="${MACOS_HELPER_EXECUTABLE}"
+elif [ -x "${RESOURCES_DIR}/../PaseoMax.bin" ]; then
+  APP_EXECUTABLE="${RESOURCES_DIR}/../PaseoMax.bin"
+elif [ -x "${RESOURCES_DIR}/../PaseoMax" ]; then
+  APP_EXECUTABLE="${RESOURCES_DIR}/../PaseoMax"
 elif [ -x "${RESOURCES_DIR}/../Paseo.bin" ]; then
   APP_EXECUTABLE="${RESOURCES_DIR}/../Paseo.bin"
 elif [ -x "${RESOURCES_DIR}/../Paseo" ]; then
