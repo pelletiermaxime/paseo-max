@@ -51,14 +51,14 @@ jobs:
         run: |
           node --input-type=module <<'NODE'
           import fs from 'node:fs';
+          import { execFileSync } from 'node:child_process';
           const root = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-          for (const file of ['package.json', ...root.workspaces.map(dir => `${dir}/package.json`)]) {
-            // Expo also evaluates native version codes during web export.
-            if (file === 'packages/app/package.json') continue;
-            const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
-            pkg.version = process.env.BUILD_VERSION;
-            fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
-          }
+          const appPackage = fs.readFileSync('packages/app/package.json');
+          root.version = process.env.BUILD_VERSION;
+          fs.writeFileSync('package.json', `${JSON.stringify(root, null, 2)}\n`);
+          execFileSync(process.execPath, ['scripts/sync-workspace-versions.mjs'], { stdio: 'inherit' });
+          // Expo also evaluates native version codes during web export.
+          fs.writeFileSync('packages/app/package.json', appPackage);
           NODE
 
       - name: Install Linux packaging and smoke dependencies
