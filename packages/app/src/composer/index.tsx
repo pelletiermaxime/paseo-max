@@ -101,6 +101,7 @@ import {
   resolvePluginClientSlashCommand,
 } from "@/plugins/client-slash-commands/model";
 import {
+  isHostRuntimeConnected,
   useHostRuntimeAgentDirectoryStatus,
   useHostRuntimeClient,
   useHostRuntimeIsConnected,
@@ -117,6 +118,13 @@ import { resolveActiveSendBehavior } from "./input/state";
 import { useKeyboardActionHandler } from "@/hooks/use-keyboard-action-handler";
 import type { KeyboardActionDefinition } from "@/keyboard/keyboard-action-dispatcher";
 import type { MessageInputKeyboardActionKind } from "@/keyboard/actions";
+import {
+  acceptComposerSuggestion,
+  checkComposerSuggestion,
+  ComposerSuggestion,
+  isSuggestionAcceptKey,
+  pluginComposerRegistry,
+} from "./plugin-suggestions";
 import { submitAgentInput } from "@/composer/submit";
 import { createMessageSubmissionWriter } from "@/composer/submission/writer";
 import { ComposerKeyboardScopeProvider, useComposerKeyboardScope } from "@/composer/keyboard-scope";
@@ -937,6 +945,8 @@ interface ComposerProps {
   blurOnSubmit?: boolean;
   textSource: ComposerTextSource;
   onChangeText: (text: string) => void;
+  /** Hydrated agent draft owner; atomically refuses existing text or attachments. */
+  onInsertDraftText?: (text: string) => boolean;
   textReplacement: TextReplacement;
   attachments: UserComposerAttachment[];
   attachmentScopeKeys?: readonly string[];
@@ -1240,6 +1250,7 @@ function ComposerContentImpl({
   blurOnSubmit = false,
   textSource,
   onChangeText,
+  onInsertDraftText,
   textReplacement,
   attachments,
   attachmentScopeKeys = EMPTY_ATTACHMENT_SCOPE_KEYS,
@@ -1306,7 +1317,6 @@ function ComposerContentImpl({
     () => textSource.getSnapshot().trim().length > 0,
     () => textSource.getSnapshot().trim().length > 0,
   );
-  const setUserInput = onChangeText;
   const workspaceAttachments = useWorkspaceAttachmentsForScopes(attachmentScopeKeys);
   const {
     selectedAttachments,
@@ -1362,7 +1372,12 @@ function ComposerContentImpl({
   );
   useEffect(() => () => cursorPublication.cancel(), [cursorPublication]);
   const autocompleteRef = useRef<ComposerAutocompleteHandle>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isProcessing, updateIsProcessing] = useState(false);
+  const processingRef = useRef(false);
+  const setIsProcessing = useCallback((processing: boolean) => {
+    processingRef.current = processing;
+    updateIsProcessing(processing);
+  }, []);
   const [pendingFiles, setPendingFiles] = useState<PendingFileAttachment[]>([]);
   const nextPendingFileId = useRef(0);
   const isUploadingFile = pendingFiles.length > 0;
@@ -1393,6 +1408,76 @@ function ComposerContentImpl({
   const keyboardHandlerIdRef = useRef(
     `message-input:${serverId}:${agentId}:${Math.random().toString(36).slice(2)}`,
   );
+
+  const { isActiveComposer } = useComposerKeyboardScope();
+  const insertionInput = {
+    text: "",
+    editor: messageInputRef.current,
+    isSubmitting: isSubmitLoading || processingRef.current,
+    hasAttachments:
+      selectedAttachments.length > 0 ||
+      isUploadingFile ||
+      pendingNativeImagePastes > 0 ||
+      hasExternalContent,
+    insertDraftText: onInsertDraftText ?? (() => false),
+  };
+  const insertionInputRef = useRef(insertionInput);
+  useLayoutEffect(() => {
+    insertionInputRef.current = insertionInput;
+  });
+  const suggestion = useMemo(
+    () =>
+      new ComposerSuggestion(
+        () => {
+          if (!isHostRuntimeConnected(getHostRuntimeStore().getSnapshot(serverId)))
+            return "composer-unavailable";
+          return checkComposerSuggestion({
+            ...insertionInputRef.current,
+            editor: messageInputRef.current,
+            isSubmitting: insertionInputRef.current.isSubmitting || processingRef.current,
+          });
+        },
+        (text) => {
+          if (!isHostRuntimeConnected(getHostRuntimeStore().getSnapshot(serverId)))
+            return { status: "composer-unavailable" };
+          return acceptComposerSuggestion({
+            ...insertionInputRef.current,
+            editor: messageInputRef.current,
+            isSubmitting: insertionInputRef.current.isSubmitting || processingRef.current,
+            text,
+          });
+        },
+      ),
+    [serverId],
+  );
+  const suggestedText = useSyncExternalStore(
+    suggestion.subscribe,
+    suggestion.getSnapshot,
+    () => null,
+  );
+  const setUserInput = useCallback(
+    (text: string) => {
+      suggestion.dismiss();
+      onChangeText(text);
+    },
+    [suggestion, onChangeText],
+  );
+  useLayoutEffect(() => {
+    if (hasText || insertionInput.hasAttachments || insertionInput.isSubmitting)
+      suggestion.dismiss();
+  }, [suggestion, hasText, insertionInput.hasAttachments, insertionInput.isSubmitting]);
+  useLayoutEffect(() => {
+    if (!isActiveComposer || !isConnected || readOnly || !onInsertDraftText) return;
+    const unregister = pluginComposerRegistry.register({
+      serverId,
+      agentId,
+      suggestText: (text, signal) => suggestion.show(text, signal),
+    });
+    return () => {
+      unregister();
+      suggestion.dismiss();
+    };
+  }, [serverId, agentId, isActiveComposer, isConnected, readOnly, onInsertDraftText, suggestion]);
 
   const replaceUserInput = useCallback(
     (text: string, selection?: { start: number; end: number }) => {
@@ -1433,6 +1518,7 @@ function ComposerContentImpl({
     [
       blurOnSubmit,
       clearDraft,
+      setIsProcessing,
       onClientSlashCommand,
       resetSuppression,
       setSelectedAttachments,
@@ -1691,6 +1777,7 @@ function ComposerContentImpl({
       isAgentRunning,
       queueMessage,
       setSelectedAttachments,
+      setIsProcessing,
       replaceUserInput,
       submitBehavior,
       submitMessage,
@@ -1983,8 +2070,23 @@ function ComposerContentImpl({
 
   // Handle keyboard navigation for command autocomplete.
   const handleCommandKeyPress = useCallback(
-    (event: ComposerKeyPressEvent) => autocompleteRef.current?.onKeyPress(event) ?? false,
-    [],
+    (event: ComposerKeyPressEvent) => {
+      if (suggestion.getSnapshot() !== null) {
+        if (isSuggestionAcceptKey(event) && event.input.text.length === 0) {
+          const result = suggestion.accept();
+          if (result?.status === "inserted") {
+            event.preventDefault();
+            return true;
+          }
+        } else if (event.key === "Escape") {
+          suggestion.dismiss();
+          event.preventDefault();
+          return true;
+        }
+      }
+      return autocompleteRef.current?.onKeyPress(event) ?? false;
+    },
+    [suggestion],
   );
 
   const cancelButtonStyle = useMemo(
@@ -2461,7 +2563,7 @@ function ComposerContentImpl({
                   onPasteImages={handleNativePasteImages}
                   client={client}
                   isReadyForDictation={isDictationReady}
-                  placeholder={messagePlaceholder}
+                  placeholder={suggestedText ?? messagePlaceholder}
                   autoFocus={messageInputAutoFocus}
                   autoFocusKey={`${serverId}:${agentId}:${autoFocusKey ?? ""}`}
                   disabled={isSubmitLoading}
