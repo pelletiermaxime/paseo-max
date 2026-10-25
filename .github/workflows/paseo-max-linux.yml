@@ -1,0 +1,98 @@
+name: Paseo Max Linux Build
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Fork package version (for example 0.13.0-max.1)"
+        required: true
+        default: "0.13.0-max.1"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paseo-max-linux-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ONNXRUNTIME_NODE_INSTALL: skip
+      NODE_OPTIONS: --max-old-space-size=6144
+      BUILD_VERSION: ${{ inputs.version }}
+      PASEO_PACKAGED_EXECUTABLE: PaseoMax
+      PASEO_DESKTOP_SMOKE: "1"
+      PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/desktop-smoke
+      EP_GH_IGNORE_TIME: true
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Validate package version
+        run: |
+          node --input-type=module <<'NODE'
+          if (!/^\d+\.\d+\.\d+-max\.[1-9]\d*$/.test(process.env.BUILD_VERSION)) {
+            throw new Error('Expected a fork version such as 0.13.0-max.1');
+          }
+          NODE
+
+      - name: Install dependencies
+        run: node scripts/npm-retry.mjs ci
+
+      - name: Set build versions
+        # Keep the desktop and bundled daemon versions equal without publishing packages.
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const root = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          for (const file of ['package.json', ...root.workspaces.map(dir => `${dir}/package.json`)]) {
+            const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
+            pkg.version = process.env.BUILD_VERSION;
+            fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
+          }
+          NODE
+
+      - name: Install Linux packaging and smoke dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb xauth rpm
+
+      - name: Build and smoke Linux x64 packages
+        run: npm run build:desktop -- --publish never --linux --x64 --config electron-builder.max.yml
+
+      - name: Record checksums and build provenance
+        run: |
+          cd packages/desktop/release
+          sha256sum *.AppImage *.deb *.rpm *.tar.gz > SHA256SUMS
+          printf 'Paseo Max %s\nSource: %s\nBuild: %s/%s/actions/runs/%s\n' \
+            "$BUILD_VERSION" "$GITHUB_SHA" "$GITHUB_SERVER_URL" "$GITHUB_REPOSITORY" "$GITHUB_RUN_ID" > BUILD.txt
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paseo-max-linux-x64-${{ inputs.version }}
+          path: |
+            packages/desktop/release/*.AppImage
+            packages/desktop/release/*.deb
+            packages/desktop/release/*.rpm
+            packages/desktop/release/*.tar.gz
+            packages/desktop/release/SHA256SUMS
+            packages/desktop/release/BUILD.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Upload smoke diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: paseo-max-linux-smoke
+          path: ${{ runner.temp }}/desktop-smoke
+          if-no-files-found: ignore
+          retention-days: 7
