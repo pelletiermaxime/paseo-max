@@ -1,0 +1,26 @@
+extends: ./electron-builder.yml
+appId: io.github.pelletiermaxime.paseomax
+productName: Paseo Max
+executableName: PaseoMax
+extraMetadata:
+  name: paseo-max
+  productName: Paseo Max
+  desktopName: PaseoMax.desktop
+protocols:
+  - name: Paseo Max agent link
+    schemes:
+      - paseo-max
+publish:
+  provider: github
+  owner: pelletiermaxime
+  repo: paseo-max
+linux:
+  artifactName: "Paseo-Max-${version}-${arch}.${ext}"
+  vendor: Paseo Max
+  executableName: PaseoMax
+  desktop:
+    entry:
+      StartupWMClass: PaseoMax
+appImage:
+  artifactName: "Paseo-Max-${version}-${arch}.${ext}"
+  executableArgs: ["--class=PaseoMax"]
