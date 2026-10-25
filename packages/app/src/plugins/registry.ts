@@ -123,6 +123,7 @@ export class PluginRegistry {
           surfaces: [],
           settingsScreens: [],
           sidebarItems: { header: [], footer: [] },
+          sidebarFooterIcons: [],
           legacySidebarItems: [],
           filePanels: [],
           workspacePanels: [],

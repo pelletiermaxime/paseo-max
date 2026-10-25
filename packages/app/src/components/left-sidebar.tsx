@@ -1,17 +1,9 @@
 import { useAddHost } from "@/hosts/add-host";
 import { router } from "expo-router";
-import {
-  CircleGauge,
-  FolderPlus,
-  GitBranch,
-  Server,
-  Settings,
-  type LucideIcon,
-} from "lucide-react-native";
+import { CircleGauge, FolderPlus, GitBranch, Server, Settings } from "lucide-react-native";
 import { useTranslation } from "react-i18next";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Pressable,
   ScrollView,
   StyleSheet as RNStyleSheet,
   Text,
@@ -39,7 +31,6 @@ import { HostPicker } from "@/components/hosts/host-picker";
 import { SidebarDisplayPreferencesMenu } from "@/components/sidebar/display-preferences/menu";
 import { SidebarSeparator } from "@/components/sidebar/sidebar-separator";
 import { SidebarNavRows } from "@/components/sidebar/sidebar-nav-rows";
-import { SidebarFooterIconHighlight } from "@/components/sidebar/sidebar-footer-icon-highlight";
 import { SidebarHelpMenu } from "@/components/sidebar/sidebar-help-menu";
 import { SidebarFooterOverflowMenu } from "@/components/sidebar/sidebar-footer-overflow-menu";
 import {
@@ -53,9 +44,7 @@ import {
   TOOLBAR_CONTROL_SIZES,
 } from "@/components/ui/control-geometry";
 import { SidebarResizeHandle } from "@/components/sidebar-resize-handle";
-import { DensityIcon } from "@/components/ui/density-icon";
 import { SidebarSectionHeader } from "@/components/sidebar/sidebar-section-header";
-import { Shortcut } from "@/components/ui/shortcut";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { HEADER_INNER_HEIGHT, useIsCompactFormFactor } from "@/constants/layout";
 import { isNative as platformIsNative } from "@/constants/platform";
@@ -75,6 +64,8 @@ import type { SidebarWorkspaceGroup } from "@/components/sidebar/sidebar-labels"
 import type { SidebarProjectIconTarget } from "@/utils/sidebar-project-row-model";
 import { type SidebarGroupMode, useSidebarViewStore } from "@/stores/sidebar-view-store";
 import { useHosts } from "@/runtime/host-runtime";
+import { FooterIconButton, IconTooltipContent } from "@/components/sidebar/footer-icon-button";
+import { PluginSidebarFooterIcon } from "@/plugins/sidebar-items/footer-icon";
 import { PluginSidebarItem } from "@/plugins/sidebar-items";
 import { builtinSidebarNavLabelKey } from "@/sidebar-nav/model";
 import { useSidebarNavItems } from "@/sidebar-nav/use-sidebar-nav-items";
@@ -155,6 +146,10 @@ export const LeftSidebar = memo(function LeftSidebar({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isCompactLayout = useIsCompactFormFactor();
+  const { items: footerItems } = useSidebarNavItems("footer");
+  const hasPluginIcons = footerItems.some(
+    (item) => item.visible && item.kind === "plugin" && item.group.kind === "icon",
+  );
   const showMobileAgent = usePanelStore((state) => state.showMobileAgent);
 
   const {
@@ -283,58 +278,6 @@ function sidebarHostOptionTestID(serverId: string): string {
   return `sidebar-host-row-${serverId}`;
 }
 
-function FooterIconButton({
-  buttonRef,
-  onPress,
-  testID,
-  label,
-  icon,
-  iconSizeAdjustment = 0,
-  shortcutKeys,
-}: {
-  onPress: () => void;
-  testID: string;
-  label: string;
-  icon: LucideIcon;
-  /** Only for a glyph that reads larger than the others at the same size. */
-  iconSizeAdjustment?: number;
-  shortcutKeys?: ReturnType<typeof useShortcutKeys>;
-  buttonRef?: RefObject<View | null>;
-}) {
-  return (
-    <Tooltip delayDuration={300}>
-      <TooltipTrigger asChild>
-        <Pressable
-          ref={buttonRef}
-          style={styles.footerIconButton}
-          testID={testID}
-          nativeID={testID}
-          collapsable={false}
-          accessible
-          accessibilityLabel={label}
-          accessibilityRole="button"
-          onPress={onPress}
-        >
-          {({ hovered, pressed }) => (
-            <>
-              <SidebarFooterIconHighlight visible={pressed} />
-              <DensityIcon
-                icon={icon}
-                size="md"
-                sizeAdjustment={iconSizeAdjustment}
-                color={hovered ? "foreground" : "foregroundMuted"}
-              />
-            </>
-          )}
-        </Pressable>
-      </TooltipTrigger>
-      <TooltipContent side="top" align="center" offset={8} testID={`${testID}-tooltip`}>
-        <IconTooltipContent label={label} shortcutKeys={shortcutKeys} />
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
 function SidebarHostPicker({
   label,
   onAddHost,
@@ -388,21 +331,6 @@ function SidebarHostPicker({
   );
 }
 
-function IconTooltipContent({
-  label,
-  shortcutKeys,
-}: {
-  label: string;
-  shortcutKeys?: ReturnType<typeof useShortcutKeys>;
-}) {
-  return (
-    <View style={styles.tooltipRow}>
-      <Text style={styles.tooltipText}>{label}</Text>
-      {shortcutKeys ? <Shortcut chord={shortcutKeys} /> : null}
-    </View>
-  );
-}
-
 function SidebarFooter({
   handleOpenProject,
   handleSettings,
@@ -434,17 +362,18 @@ function SidebarFooter({
   const { inline, overflow } = useMemo(
     () =>
       resolveSidebarFooterLayout({
-        rowWidth,
+        rowWidth:
+          rowWidth -
+          (hasPluginIcons ? TOOLBAR_CONTROL_SIZES[controlSizingForLayout(isCompactLayout)] : 0),
         controlSize: TOOLBAR_CONTROL_SIZES[controlSizingForLayout(isCompactLayout)],
         rowPadding: FOOTER_ROW_PADDING,
         actions: SIDEBAR_FOOTER_ACTIONS,
       }),
-    [rowWidth, isCompactLayout],
+    [rowWidth, isCompactLayout, hasPluginIcons],
   );
   const isInline = (action: SidebarFooterAction) => inline.includes(action);
 
-  // One line of icons: Add project, Usage, Hosts, then Help and Settings at the end. Actions that
-  // don't fit move behind a caret before Settings.
+  // Keep one slot for the scrolling plugin strip; built-ins that no longer fit use overflow.
   return (
     <UsageSidebarRoot>
       <View style={styles.footerContainer} testID="sidebar-footer">
@@ -471,6 +400,7 @@ function SidebarFooter({
               onOpenHostSettings={handleOpenHostSettings}
             />
           ) : null}
+          <SidebarPluginFooterIcons onBeforeNavigate={onBeforeNavigate} />
           <View style={styles.footerSpacer} />
           {isInline("help") ? <SidebarHelpMenu /> : null}
           {overflow.length > 0 ? (
@@ -498,6 +428,32 @@ function SidebarFooter({
   );
 }
 
+function SidebarPluginFooterIcons({ onBeforeNavigate }: { onBeforeNavigate?: () => void }) {
+  const { items } = useSidebarNavItems("footer");
+  const icons = items.filter(
+    (item) => item.visible && item.kind === "plugin" && item.group.kind === "icon",
+  );
+  if (icons.length === 0) return null;
+  return (
+    <ScrollView
+      horizontal
+      style={styles.pluginFooterIcons}
+      contentContainerStyle={styles.pluginFooterIconContent}
+      showsHorizontalScrollIndicator={false}
+    >
+      {icons.map((item) =>
+        item.kind === "plugin" && item.group.kind === "icon" ? (
+          <PluginSidebarFooterIcon
+            key={item.key}
+            group={item.group}
+            onBeforeNavigate={onBeforeNavigate}
+          />
+        ) : null,
+      )}
+    </ScrollView>
+  );
+}
+
 function SidebarUsageIcon({ label }: { label: string }) {
   const openUsage = useOpenSidebarUsage();
   return (
@@ -519,7 +475,9 @@ function SidebarFooterRows({ onBeforeNavigate }: { onBeforeNavigate?: () => void
   const usageSummary = useUsageSummary();
   const rowsRef = useRef<View | null>(null);
   const visibleItems = items.filter(
-    (item) => item.visible && (item.kind === "plugin" || usageSummary.length > 0),
+    (item) =>
+      item.visible &&
+      (item.kind === "plugin" ? item.group.kind !== "icon" : usageSummary.length > 0),
   );
   if (visibleItems.length === 0) return null;
   return (
@@ -998,6 +956,14 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: FOOTER_ROW_PADDING,
     paddingVertical: theme.spacing[1.5],
   },
+  pluginFooterIcons: {
+    flexGrow: 0,
+    flexShrink: 1,
+    minWidth: density.iconButton,
+  },
+  pluginFooterIconContent: {
+    alignItems: "center",
+  },
   // Pushes Help and Settings to the end of the icon line.
   footerSpacer: {
     flex: 1,
@@ -1007,22 +973,5 @@ const styles = StyleSheet.create((theme) => ({
     paddingHorizontal: theme.spacing[2],
     paddingVertical: theme.spacing[1.5],
     gap: 2,
-  },
-  footerIconButton: {
-    width: density.iconButton,
-    height: density.iconButton,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: theme.spacing[1],
-    paddingHorizontal: theme.spacing[1],
-  },
-  tooltipRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: theme.spacing[2],
-  },
-  tooltipText: {
-    fontSize: theme.fontSize.base,
-    color: theme.colors.popoverForeground,
   },
 }));
