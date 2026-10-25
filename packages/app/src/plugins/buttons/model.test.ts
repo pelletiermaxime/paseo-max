@@ -25,6 +25,7 @@ function installation(): InstalledPlugin {
     surfaces: [],
     sidebarViews: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     workspaceRowBadgeItems: [],
     filePanels: [],

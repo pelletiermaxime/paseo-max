@@ -34,6 +34,34 @@ function typeErrors(code: string): string[] {
 }
 
 describe("paseo-plugin skill examples", () => {
+  it("typechecks the optional compact footer icon API and its row fallback", () => {
+    expect(
+      typeErrors(`
+      import type { PluginClientContext, PluginSidebarItemProps, PluginSidebarFooterIconContribution } from "@getpaseo/plugin/client";
+      import { SidebarRow } from "@getpaseo/plugin/client/ui";
+      import { defineTranslations } from "@getpaseo/plugin/client";
+      const messages = defineTranslations({ resources: { en: { usage: "Usage" } } });
+      function UsageRow({ openScreen }: PluginSidebarItemProps) {
+        return <SidebarRow icon="ChartNoAxesCombined" onPress={() => openScreen({ screenId: "usage" })} />;
+      }
+      function contribute(client: PluginClientContext) {
+        const icon: PluginSidebarFooterIconContribution = {
+          id: "usage", title: "Usage", icon: "ChartNoAxesCombined",
+          onPress(context) { context.openScreen({ screenId: "usage" }); }
+        };
+        if (typeof client.addSidebarFooterIcon === "function") {
+          client.addSidebarFooterIcon(icon);
+          client.addSidebarFooterIcon({ ...icon, title: messages.message("usage"), icon: { svg: '<svg viewBox="0 0 24 24" />' } });
+          client.addSidebarFooterIcon({ ...icon, icon: ({ size, color }) => null });
+          // @ts-expect-error callbacks receive global capabilities, not a workspace context
+          client.addSidebarFooterIcon({ ...icon, onPress(context) { context.workspace.id; } });
+        } else {
+          client.addSidebarFooterItem({ id: "usage", title: "Usage", Component: UsageRow });
+        }
+      }
+    `),
+    ).toEqual([]);
+  });
   it("composer pill example typechecks against the plugin SDK", () => {
     expect(typeErrors(sectionCode("Add a composer pill"))).toEqual([]);
   });
