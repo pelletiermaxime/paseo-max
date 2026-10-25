@@ -26,7 +26,6 @@ jobs:
       BUILD_VERSION: ${{ inputs.version }}
       PASEO_PACKAGED_EXECUTABLE: PaseoMax
       PASEO_DESKTOP_SMOKE: "1"
-      PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/desktop-smoke
       EP_GH_IGNORE_TIME: true
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -64,6 +63,8 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y xvfb xauth rpm
 
       - name: Build and smoke Linux x64 packages
+        env:
+          PASEO_DESKTOP_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/desktop-smoke
         run: npm run build:desktop -- --publish never --linux --x64 --config electron-builder.max.yml
 
       - name: Record checksums and build provenance
