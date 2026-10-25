@@ -14,14 +14,28 @@ Automatic hibernation requires a plugin to set the policy. The workflow plugin's
 settings integration is maintained separately and is not bundled in this repo.
 
 Fork source tags use `paseo-max-v<upstream-version>-<fork-revision>`, starting with
-`paseo-max-v0.13.0-1`. Package versions still match the upstream base; these tags
-do not publish npm packages or provide desktop installers. GitHub Actions are
-initially disabled in this repository because the inherited workflows include
-upstream deployment and publishing jobs.
+`paseo-max-v0.13.0-1`. These tags do not publish npm packages. The manual
+[Linux build workflow](.github/workflows/paseo-max-linux.yml) creates x64 AppImage,
+Debian, RPM and tar.gz packages as downloadable Actions artifacts, retained for
+14 days. Package versions use `0.13.0-max.1` and are applied only on the build
+runner. Inherited deployment and publishing workflows remain disabled.
 
-The final source snapshot has not had a fresh packaged build and full Electron
-validation. The Paseo overview and installation links below describe upstream;
-upstream downloads do not include this fork's hibernation feature.
+The Linux build uses the name Paseo Max, a separate desktop entry and protocol,
+the profile `~/.config/Paseo Max`, and daemon home `~/.paseo-max` on
+`127.0.0.1:17678`. Auto-updates and global CLI installation are disabled. For
+explicit state overrides, use `PASEO_MAX_USER_DATA`, `PASEO_MAX_HOME` and
+`PASEO_MAX_LISTEN`; generic upstream Paseo variables do not select the fork's state.
+The build runs upstream's packaged-app smoke check on the GitHub runner using
+temporary state. This does not cover the complete hibernation user journey.
+
+Download the package artifact from a successful **Paseo Max Linux Build** run in
+Actions. The artifact includes `SHA256SUMS` and `BUILD.txt` with the source commit.
+For the tar.gz, extract it and run `./PaseoMax`; AppImage users must first make
+the downloaded file executable. The workflow plugin integration still needs to
+be installed separately in the fork's daemon.
+
+The Paseo overview and installation links below describe upstream; upstream
+downloads do not include this fork's hibernation feature.
 
 ---
 
