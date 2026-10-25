@@ -53,6 +53,8 @@ jobs:
           import fs from 'node:fs';
           const root = JSON.parse(fs.readFileSync('package.json', 'utf8'));
           for (const file of ['package.json', ...root.workspaces.map(dir => `${dir}/package.json`)]) {
+            // Expo also evaluates native version codes during web export.
+            if (file === 'packages/app/package.json') continue;
             const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
             pkg.version = process.env.BUILD_VERSION;
             fs.writeFileSync(file, `${JSON.stringify(pkg, null, 2)}\n`);
