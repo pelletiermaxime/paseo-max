@@ -1,7 +1,7 @@
 # Paseo Max
 
 An experimental fork of [Paseo](https://github.com/getpaseo/paseo), based on
-upstream v0.13.0, with desktop browser hibernation.
+upstream v0.13.0, with desktop browser hibernation and additional plugin APIs.
 
 Client plugins can configure an inactivity timeout per workspace through the
 optional [`workspaceResources` API](public-docs/plugins/reference.md#hibernate-inactive-workspace-browsers).
@@ -12,6 +12,13 @@ Hibernation discards unsaved page state and bypasses page unload warnings.
 
 Automatic hibernation requires a plugin to set the policy. The workflow plugin's
 settings integration is maintained separately and is not bundled in this repo.
+
+Plugins can add compact icons to the fixed sidebar footer with
+[`addSidebarFooterIcon`](public-docs/plugins/reference.md#compact-footer-icons-in-paseo-max).
+They can also show faint text in an empty agent composer with
+[`composer.suggestText`](public-docs/plugins/reference.md#show-a-composer-suggestion-in-paseo-max).
+Tab or Right Arrow accepts the suggestion as an editable draft; acceptance never sends a message.
+Suggestion generation and the Task Workspaces integration remain in the separate plugin.
 
 The original source snapshot is tagged `paseo-max-v0.13.0-1`. Binary prereleases
 use `paseo-max-v<package-version>`, starting with `paseo-max-v0.13.0-max.1`, and
