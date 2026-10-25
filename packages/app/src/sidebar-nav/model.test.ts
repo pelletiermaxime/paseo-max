@@ -286,6 +286,51 @@ describe("builtinSidebarNavShortcutAction", () => {
 });
 
 describe("footer section", () => {
+  it("stores icon visibility separately from rows and other plugins and preserves it across unload", () => {
+    const icon: PluginSidebarGroup = {
+      ...group("usage", "main"),
+      kind: "icon",
+      icon: "Activity",
+      targets: [],
+    };
+    const other: PluginSidebarGroup = { ...icon, pluginId: "other" };
+    const row = group("usage", "main");
+    const iconKey = pluginSidebarNavKey(icon);
+    expect(iconKey).toBe("plugin-icon:usage:main");
+    const items = resolveSidebarNavItems({
+      section: "footer",
+      pluginGroups: [row, icon, other],
+      preferences: [],
+    });
+    expect(items.filter((item) => item.kind === "plugin").every((item) => item.visible)).toBe(true);
+    const hidden = setSidebarNavItemVisible({ items, key: iconKey, visible: false, previous: [] });
+    const disconnected = resolveSidebarNavItems({
+      section: "footer",
+      pluginGroups: [row, other],
+      preferences: hidden,
+    });
+    const updated = setSidebarNavItemVisible({
+      items: disconnected,
+      key: "usage",
+      visible: true,
+      previous: hidden,
+    });
+    const reloaded = resolveSidebarNavItems({
+      section: "footer",
+      pluginGroups: [row, icon, other],
+      preferences: updated,
+    });
+    expect(reloaded.find((item) => item.key === iconKey)?.visible).toBe(false);
+    expect(reloaded.find((item) => item.key === pluginSidebarNavKey(row))?.visible).toBe(true);
+    expect(reloaded.find((item) => item.key === pluginSidebarNavKey(other))?.visible).toBe(true);
+    const moved = moveSidebarNavItem({
+      items: reloaded,
+      key: iconKey,
+      direction: "up",
+      previous: updated,
+    });
+    expect(moved.findIndex((item) => item.key === iconKey)).toBe(1);
+  });
   const sync = group("sync", "status");
   const syncKey = pluginSidebarNavKey(sync);
 

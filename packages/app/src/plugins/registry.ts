@@ -124,6 +124,7 @@ export class PluginRegistry {
           settingsScreens: [],
           sidebarViews: [],
           sidebarItems: { header: [], footer: [] },
+          sidebarFooterIcons: [],
           legacySidebarItems: [],
           filePanels: [],
           composerItems: [],

@@ -20,6 +20,7 @@ export type {
   PluginSidebarViewProps,
   PluginSidebarViewContribution,
   PluginSidebarItemContribution,
+  PluginSidebarFooterIconContribution,
   PluginIcon,
   PluginPanelLocation,
   PluginOpenPanelOptions,

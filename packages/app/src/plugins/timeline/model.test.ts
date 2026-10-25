@@ -26,6 +26,7 @@ function plugin(input: {
     surfaces: [],
     sidebarViews: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     filePanels: [],
     composerItems: [],

@@ -17,6 +17,7 @@ import type {
   PluginSidebarContribution as SDKPluginSidebarContribution,
   PluginSidebarViewContribution,
   PluginSidebarItemContribution as SDKPluginSidebarItemContribution,
+  PluginSidebarFooterIconContribution as SDKPluginSidebarFooterIconContribution,
   PluginScreenContribution as SDKPluginScreenContribution,
   PluginSettingsScreenContribution as SDKPluginSettingsScreenContribution,
   PluginTimelineRendererContribution,
@@ -33,6 +34,7 @@ type PluginClientSlashCommandContribution = SDKPluginClientSlashCommandContribut
 type PluginComposerPillContribution = SDKPluginComposerPillContribution<PluginText>;
 type PluginSidebarContribution = SDKPluginSidebarContribution<PluginText>;
 type PluginSidebarItemContribution = SDKPluginSidebarItemContribution<PluginText>;
+type PluginSidebarFooterIconContribution = SDKPluginSidebarFooterIconContribution<PluginText>;
 type PluginScreenContribution = SDKPluginScreenContribution<PluginText>;
 type PluginSettingsScreenContribution = SDKPluginSettingsScreenContribution<PluginText>;
 type WorkspacePanelInput = SDKPluginWorkspacePanelContribution<PluginText>;
@@ -53,6 +55,7 @@ export interface EvaluatedPlugin {
   settingsScreens: PluginSettingsScreenContribution[];
   sidebarViews: PluginSidebarViewContribution<PluginText>[];
   sidebarItems: Record<PluginSidebarSection, PluginSidebarItemContribution[]>;
+  sidebarFooterIcons: PluginSidebarFooterIconContribution[];
   // COMPAT(pluginSidebarAliases): added in v0.11.0, remove after 2027-03-29
   /** `addSidebarItem` registrations, so `/plugin/<id>/sidebar/<item>` routes keep resolving. */
   legacySidebarItems: PluginSidebarContribution[];
@@ -95,6 +98,7 @@ export type {
   PluginComposerPillContribution,
   PluginSidebarContribution,
   PluginSidebarItemContribution,
+  PluginSidebarFooterIconContribution,
   PluginScreenContribution,
   PluginSettingsScreenContribution,
   PluginThemeContribution,
