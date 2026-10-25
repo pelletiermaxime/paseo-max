@@ -1,3 +1,10 @@
+import {
+  forgetBrowserHibernation,
+  getSleepingBrowserIds,
+  waitForBrowserHibernation,
+  wakeBrowser,
+} from "../hibernation";
+import { browserHibernationPolicy } from "../hibernation/policy";
 import { BROWSER_AUTOMATION_COMMAND_NAMES } from "@getpaseo/protocol/browser-automation/rpc-schemas";
 import type { SessionInboundMessage, SessionOutboundMessage } from "@getpaseo/protocol/messages";
 import { getDesktopHost, type DesktopHostBridge } from "@/desktop/host";
@@ -49,7 +56,7 @@ export function mountBrowserAutomationHandler(
 ): () => void {
   const getHost = options.getHost ?? getDesktopHost;
   const unsubscribe = options.client.on("browser.automation.execute.request", (request) => {
-    void handleBrowserAutomationRequest({
+    void handleLeasedBrowserAutomationRequest({
       client: options.client,
       getHost,
       request,
@@ -97,6 +104,77 @@ export function mountBrowserAutomationDaemonClientHandler(
       .release()
       .catch((error) => console.warn("Failed to release browser host", error));
   };
+}
+
+async function handleLeasedBrowserAutomationRequest(
+  params: Parameters<typeof handleBrowserAutomationRequest>[0],
+): Promise<void> {
+  const { request, serverId } = params;
+  const command = request.command;
+  const browserId = "browserId" in command.args ? command.args.browserId : null;
+  const release = browserId ? browserHibernationPolicy.lease(browserId) : () => {};
+  const workspaceKey =
+    serverId && request.workspaceId
+      ? buildWorkspaceTabPersistenceKey({ serverId, workspaceId: request.workspaceId })
+      : null;
+  if (workspaceKey) browserHibernationPolicy.touch(workspaceKey, Date.now());
+  try {
+    if (browserId) await waitForBrowserHibernation(browserId);
+    if (browserId && command.command !== "close_tab") {
+      const ready = await wakeBrowserForRequest(params, browserId);
+      if (!ready) return;
+    }
+    await handleBrowserAutomationRequest(params);
+  } catch (error) {
+    params.client.sendBrowserAutomationExecuteResponse({
+      type: "browser.automation.execute.response",
+      payload: normalizeThrownBridgeError(request.requestId, error),
+    });
+  } finally {
+    release();
+    if (workspaceKey) browserHibernationPolicy.touch(workspaceKey, Date.now());
+  }
+}
+
+async function wakeBrowserForRequest(
+  params: Parameters<typeof handleBrowserAutomationRequest>[0],
+  browserId: string,
+): Promise<boolean> {
+  if (!getSleepingBrowserIds().has(browserId)) return true;
+  const { request, serverId } = params;
+  const workspaceId = request.workspaceId;
+  const record = getBrowserRecord(browserId);
+  const execute = params.getHost()?.browser?.executeAutomationCommand;
+  if (!serverId || !workspaceId || !record || !execute)
+    throw new Error("Cannot wake browser without its workspace context");
+  if (!findWorkspaceBrowserTab({ serverId, workspaceId, browserId }))
+    throw new Error("Browser does not belong to this workspace");
+  params.ensureResidentBrowserWebview({ browserId, workspaceId, url: record.url });
+  if (record.viewport.mode === "fixed") {
+    resizeResidentBrowserWebview({ browserId, ...record.viewport });
+  }
+  const registered = await waitForBrowserRegistration({
+    request,
+    browserId,
+    workspaceId,
+    executeAutomationCommand: execute,
+    timeoutMs: params.registrationWaitTimeoutMs,
+    pollIntervalMs: params.registrationPollIntervalMs,
+  });
+  if (!registered) {
+    params.client.sendBrowserAutomationExecuteResponse({
+      type: "browser.automation.execute.response",
+      payload: browserAutomationFailure({
+        requestId: request.requestId,
+        code: "browser_timeout",
+        message: "Timed out waking browser tab.",
+        retryable: true,
+      }),
+    });
+    return false;
+  }
+  wakeBrowser(browserId);
+  return true;
 }
 
 async function handleBrowserAutomationRequest(params: {
@@ -185,7 +263,11 @@ async function handleBrowserAutomationRequest(params: {
     const payload = await executeAutomationCommand(request);
     client.sendBrowserAutomationExecuteResponse({
       type: "browser.automation.execute.response",
-      payload: normalizeBridgePayload(request.requestId, payload),
+      payload: includeSleepingBrowserTabs({
+        request,
+        serverId,
+        payload: normalizeBridgePayload(request.requestId, payload),
+      }),
     });
   } catch (error) {
     client.sendBrowserAutomationExecuteResponse({
@@ -193,6 +275,35 @@ async function handleBrowserAutomationRequest(params: {
       payload: normalizeThrownBridgeError(request.requestId, error),
     });
   }
+}
+
+function includeSleepingBrowserTabs(input: {
+  request: BrowserAutomationExecuteRequest;
+  serverId: string | undefined;
+  payload: BrowserAutomationResponsePayload;
+}): BrowserAutomationResponsePayload {
+  const { request, serverId, payload } = input;
+  if (!payload.ok || payload.result.command !== "list_tabs" || !serverId || !request.workspaceId)
+    return payload;
+  const tabs = [...payload.result.tabs];
+  for (const browserId of getSleepingBrowserIds()) {
+    const owned = findWorkspaceBrowserTab({
+      serverId,
+      workspaceId: request.workspaceId,
+      browserId,
+    });
+    const record = getBrowserRecord(browserId);
+    if (!owned || !record || tabs.some((tab) => tab.browserId === browserId)) continue;
+    tabs.push({
+      browserId,
+      workspaceId: request.workspaceId,
+      url: record.url,
+      title: record.title,
+      isActive: false,
+      isLoading: false,
+    });
+  }
+  return { ...payload, result: { command: "list_tabs", tabs } };
 }
 
 function resizeBrowserTabForRequest(params: {
@@ -281,6 +392,7 @@ async function closeBrowserTabForRequest(params: {
   }
 
   useWorkspaceLayoutStore.getState().closeTab(workspaceTab.workspaceKey, workspaceTab.tabId);
+  forgetBrowserHibernation(browserId);
   useBrowserStore.getState().removeBrowser(browserId);
   removeResidentBrowserWebview(browserId);
   await browserHost?.unregisterWorkspaceBrowser?.(browserId);

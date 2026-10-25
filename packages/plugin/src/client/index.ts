@@ -1,5 +1,7 @@
 export type {
   PluginHostProps,
+  PluginWorkspaceResources,
+  PluginWorkspaceBrowserPolicy,
   PluginTab,
   PluginPanelProps,
   PluginWorkspacePanelParams,
