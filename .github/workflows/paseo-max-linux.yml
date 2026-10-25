@@ -182,15 +182,19 @@ jobs:
           cat > "$RUNNER_TEMP/release-notes.md" <<EOF
           Experimental Paseo Max desktop build, based on upstream Paseo v${BUILD_VERSION%-max.*}.
 
-          Inactive workspace browser hibernation, keep-awake pins, and faded sleeping tabs.
-          A compatible plugin must configure the hibernation policy; the workflow plugin is separate.
+          Included plugin capabilities:
+          - Compact plugin icons in the fixed sidebar footer through addSidebarFooterIcon.
+          - Faint composer suggestions through composer.suggestText, accepted with Tab or Right Arrow as editable drafts. Typing or Escape dismisses the suggestion; nothing is sent automatically.
+          - Inactive workspace browser hibernation, keep-awake pins, and faded sleeping tabs.
+
+          Plugins supply the actions, suggestion generation, and hibernation policy. The Task Workspaces plugin is separate and is not bundled in this release.
 
           Linux x64 packages: AppImage, portable tar.gz, Debian and RPM. The tarball runs without installation: extract it and launch PaseoMax.
 
           Separate state: ~/.config/Paseo Max and ~/.paseo-max; daemon address 127.0.0.1:17678.
           Automatic updates and global paseo CLI installation are disabled.
 
-          The packaged-app smoke check passed (renderer/preload, bundled daemon, built-in plugins, CLI and terminal). The complete hibernation user journey was not replayed in this build.
+          The packaged-app smoke check passed (renderer/preload, bundled daemon, built-in plugins, CLI and terminal). Composer suggestion keyboard acceptance was verified separately in the web app. Full native mobile and packaged-app plugin user journeys were not replayed in this build.
 
           Source commit: $RELEASE_SOURCE_SHA
           Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${SOURCE_RUN_ID:-$GITHUB_RUN_ID}
