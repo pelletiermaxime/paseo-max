@@ -2403,7 +2403,7 @@ export const ja: TranslationResources = {
         footer: {
           title: "フッター",
           description:
-            "サイドバー下部に表示する行とその順序を選択します。プロジェクトを追加とアイコンの行は常に表示されます",
+            "フッターの行とプラグインアイコンの表示と順序を選択します。組み込みのアイコンは常に表示されます",
         },
         moveUp: "上に移動",
         moveDown: "下に移動",

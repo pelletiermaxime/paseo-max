@@ -2394,7 +2394,7 @@ export const ko: TranslationResources = {
         footer: {
           title: "푸터",
           description:
-            "사이드바 하단에 표시할 행과 순서를 선택하세요. 프로젝트 추가와 아이콘 행은 항상 표시됩니다",
+            "바닥글 행과 플러그인 아이콘의 표시 여부와 순서를 선택하세요. 기본 아이콘 작업은 항상 표시됩니다",
         },
         moveUp: "위로 이동",
         moveDown: "아래로 이동",

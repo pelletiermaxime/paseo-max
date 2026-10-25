@@ -39,6 +39,7 @@ import type { PluginSidebarSection } from "../types";
 import { SidebarItemFrameContext, type SidebarItemFrame } from "./frame";
 import { LegacyPluginSidebarRow } from "./legacy";
 import { resolvePluginPlatform } from "../platform";
+import { PluginSidebarFooterIcon } from "./footer-icon";
 
 export { SidebarRow, SidebarSeparator } from "./kit";
 
@@ -70,6 +71,9 @@ type PluginSidebarItemHostProps = Omit<PluginSidebarItemEntryProps, "group"> & {
  * `addSidebarItem` group renders the app's own row.
  */
 export function PluginSidebarItem({ group, ...props }: PluginSidebarItemEntryProps) {
+  if (group.kind === "icon") {
+    return <PluginSidebarFooterIcon group={group} onBeforeNavigate={props.onBeforeNavigate} />;
+  }
   if (group.kind === "legacy") {
     return <LegacyPluginSidebarRow group={group} onBeforeNavigate={props.onBeforeNavigate} />;
   }

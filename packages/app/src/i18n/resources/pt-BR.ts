@@ -2418,7 +2418,7 @@ export const ptBR: TranslationResources = {
         footer: {
           title: "Rodapé",
           description:
-            "Escolha quais linhas aparecem na parte inferior da barra lateral e em que ordem. Adicionar projeto e a linha de ícones sempre aparecem",
+            "Escolha quais linhas e ícones de plugins aparecem no rodapé e em que ordem. As ações integradas ficam sempre visíveis",
         },
         moveUp: "Mover para cima",
         moveDown: "Mover para baixo",

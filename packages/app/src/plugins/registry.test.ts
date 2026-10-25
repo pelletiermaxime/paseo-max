@@ -44,6 +44,7 @@ function bundle(marker: string): string {
       function Surface() { return ${JSON.stringify(marker)}; }
       plugin.addSurface("main", Surface);
       plugin.addSidebarItem({ id: "main", title: "Example", icon: "Blocks", surface: "main" });
+      plugin.addSidebarFooterIcon({ id: "main", title: "Example", icon: "Blocks", onPress() {} });
       plugin.addWorkspacePanel({ id: "review", title: "Review", icon: "Blocks", context: "workspace", Component: Surface });
       plugin.addCommandCenterItem({ id: "open-review", title: "Open review", icon: "Blocks", context: "workspace", onSelect() {} });
       return function() { globalThis.__pluginCleanups = (globalThis.__pluginCleanups || 0) + 1; };
@@ -170,12 +171,14 @@ describe("PluginRegistry", () => {
     expect(second).not.toBe(first);
     expect(second?.workspacePanels.map((panel) => panel.id)).toEqual(["review"]);
     expect(second?.commandCenterItems.map((item) => item.id)).toEqual(["open-review"]);
+    expect(second?.sidebarFooterIcons.map((item) => item.id)).toEqual(["main"]);
     expect(first?.queryClient.getQueryData(["attachment-search"])).toBeUndefined();
     expect(Reflect.get(globalThis, "__pluginCleanups")).toBe(1);
   });
 
   it.each(["disable", "remove"])("cleans a catalog entry exactly once on %s", () => {
     pluginRegistry.installCatalog("host-a", [{ id: "example", clientBundle: bundle("one") }]);
+    expect(pluginRegistry.getSnapshot()[0]?.sidebarFooterIcons).toHaveLength(1);
 
     pluginRegistry.installCatalog("host-a", []);
     pluginRegistry.installCatalog("host-a", []);

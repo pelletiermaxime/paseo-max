@@ -6,6 +6,7 @@ import {
   BOTS_PLUGIN_ID,
   COMPACT,
   LEGACY_PLUGIN_ID,
+  ICONS_PLUGIN_ID,
   SHOWCASE_PLUGIN_ID,
   WIDE,
   closeScreen,
@@ -136,10 +137,12 @@ function sidebarFooter(page: Page): Locator {
 test.describe("Plugin sidebar items", () => {
   let workspaceId: string;
   let cleanup: () => Promise<void>;
+  let sidebarPlugins: Awaited<ReturnType<typeof installSidebarPlugins>>;
 
   test.beforeEach(async () => {
     const workspace = await seedWorkspace({ repoPrefix: "plugin-sidebar-items-" });
-    const plugins = await installSidebarPlugins();
+    const plugins = await installSidebarPlugins({ footerIcons: true });
+    sidebarPlugins = plugins;
     workspaceId = workspace.workspaceId;
     cleanup = async () => {
       await plugins.cleanup();
@@ -149,6 +152,86 @@ test.describe("Plugin sidebar items", () => {
 
   test.afterEach(async () => {
     await cleanup();
+  });
+
+  test("footer icons use the fixed row, accessibility, visibility, lifecycle and compact navigation", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize(WIDE);
+    await gotoWorkspace(page, workspaceId);
+    const iconId = `plugin-sidebar-footer-icon-${ICONS_PLUGIN_ID}-usage`;
+    const icon = () =>
+      visibleTestId(page, "sidebar-footer-bottom-line").getByRole("button", {
+        name: "Plugin Usage",
+        exact: true,
+      });
+    await expect(icon()).toBeVisible({ timeout: 30_000 });
+    await expect(footerItem(page, ICONS_PLUGIN_ID, "usage")).toHaveCount(0);
+    await expect(icon()).toHaveAccessibleName("Plugin Usage");
+    const button = await boxOf(icon());
+    const builtIn = await boxOf(visibleTestId(page, "sidebar-settings"));
+    expect(button.height).toBe(builtIn.height);
+    expect(button.width).toBe(builtIn.width);
+    expect(button.y).toBeCloseTo(builtIn.y, 0);
+    await icon().hover();
+    await expect(page.getByTestId(`${iconId}-tooltip`)).toHaveText("Plugin Usage");
+    await icon().focus();
+    await icon().press("Enter");
+    await expect(page).toHaveURL(
+      new RegExp(
+        `/h/${encodeURIComponent(getServerId())}/plugin/${ICONS_PLUGIN_ID}/surface/usage$`,
+      ),
+    );
+    await expect(page.getByText(`Usage host: ${getServerId()}`, { exact: true })).toBeVisible();
+    await closeScreen(page);
+    await icon().focus();
+    await icon().press("Space");
+    await expect(page.getByText(`Usage host: ${getServerId()}`, { exact: true })).toBeVisible();
+    await closeScreen(page);
+
+    await openSidebarNavSettings(page);
+    const key = `plugin-icon:${ICONS_PLUGIN_ID}:usage`;
+    await setFooterItemVisible(page, key, false);
+    await leaveSettings(page);
+    await expect(icon()).toHaveCount(0);
+    await page.reload();
+    await expect(icon()).toHaveCount(0);
+    await openSidebarNavSettings(page);
+    await setFooterItemVisible(page, key, true);
+    await leaveSettings(page);
+    await expect(icon()).toHaveCount(1);
+    await sidebarPlugins.reloadIcons();
+    await expect(icon()).toHaveCount(1);
+    await sidebarPlugins.disableIcons();
+    await expect(icon()).toHaveCount(0);
+    await sidebarPlugins.enableIcons();
+    await expect(icon()).toHaveCount(1);
+    await qaScreenshot(page, "footer-icons-desktop", visibleTestId(page, "sidebar-footer"));
+
+    await runCommand(page, "Add footer icons");
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.getByRole("button", { name: "Open menu", exact: true }).first().click();
+    await expect(icon()).toBeInViewport();
+    expect((await boxOf(icon())).width).toBeCloseTo(44, 1);
+    for (const id of [
+      "sidebar-add-project",
+      "sidebar-hosts-trigger",
+      "sidebar-help",
+      "sidebar-settings",
+    ]) {
+      await expect(visibleTestId(page, id)).toBeInViewport({ ratio: 0.99 });
+      expect((await boxOf(visibleTestId(page, id))).width).toBeCloseTo(44, 1);
+    }
+    // Keyboard focus scrolls overflow into view without moving the fixed built-ins.
+    const last = visibleTestId(page, `plugin-sidebar-footer-icon-${ICONS_PLUGIN_ID}-extra-7`);
+    await last.focus();
+    await expect(last).toBeInViewport();
+    await expect(visibleTestId(page, "sidebar-settings")).toBeInViewport();
+    await qaScreenshot(page, "footer-icons-compact-overflow");
+    await last.press("Enter");
+    await expect(page.getByText(`Usage host: ${getServerId()}`, { exact: true })).toBeVisible();
+    await expect(visibleTestId(page, "sidebar-footer-bottom-line")).toHaveCount(0);
   });
 
   test("a plugin's screen, header row, footer popover and command work together", async ({

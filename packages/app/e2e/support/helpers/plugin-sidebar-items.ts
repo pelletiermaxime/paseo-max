@@ -9,6 +9,7 @@ import { pluginRequirements } from "./plugin-fixture";
 export const SHOWCASE_PLUGIN_ID = "sidebar-showcase";
 export const LEGACY_PLUGIN_ID = "legacy-sidebar";
 export const BOTS_PLUGIN_ID = "sidebar-bots";
+export const ICONS_PLUGIN_ID = "sidebar-icons";
 export const WIDE = { width: 1440, height: 900 };
 export const COMPACT = { width: 390, height: 844 };
 
@@ -195,15 +196,40 @@ export default function contribute(plugin) {
 }
 `;
 
-export async function installSidebarPlugins() {
+const ICONS_SOURCE = `import React from "react";
+import { Text, View } from "react-native";
+import { SidebarRow } from "@getpaseo/plugin/client/ui";
+function Usage({ theme, host }) {
+  return <View><Text style={{ color: theme.colors.foreground }}>{"Usage host: " + host.id}</Text></View>;
+}
+function UsageRow({ openScreen }) {
+  return <SidebarRow icon="ChartNoAxesCombined" onPress={() => openScreen({ screenId: "usage" })} />;
+}
+export default function contribute(client) {
+  client.addScreen({ id: "usage", title: "Usage", Component: Usage });
+  if (typeof client.addSidebarFooterIcon === "function") {
+    client.addSidebarFooterIcon({ id: "usage", title: "Plugin Usage", icon: "ChartNoAxesCombined", onPress(ctx) { ctx.openScreen({ screenId: "usage" }); } });
+  } else {
+    client.addSidebarFooterItem({ id: "usage", title: "Plugin Usage", Component: UsageRow });
+  }
+  client.addCommandCenterItem({ id: "overflow", title: "Add footer icons", icon: "Plus", context: "global", onSelect() {
+    for (let i = 0; i < 8; i++) client.addSidebarFooterIcon({ id: "extra-" + i, title: "Extra " + i, icon: "Activity", onPress(ctx) { ctx.openScreen({ screenId: "usage" }); } });
+  } });
+  return () => {};
+}
+`;
+
+export async function installSidebarPlugins(options: { footerIcons?: boolean } = {}) {
   const client = await connectNewWorkspaceDaemonClient({ ownProjects: false });
   const config = await client.getDaemonConfig();
   const directories: string[] = [];
-  for (const [id, source] of [
+  const sources = [
     [SHOWCASE_PLUGIN_ID, SHOWCASE_SOURCE],
     [LEGACY_PLUGIN_ID, LEGACY_SOURCE],
     [BOTS_PLUGIN_ID, BOTS_SOURCE],
-  ] as const) {
+    ...(options.footerIcons ? [[ICONS_PLUGIN_ID, ICONS_SOURCE]] : []),
+  ];
+  for (const [id, source] of sources) {
     const directory = await mkdtemp(path.join(tmpdir(), `paseo-${id}-`));
     directories.push(directory);
     await writeFile(
@@ -215,10 +241,11 @@ export async function installSidebarPlugins() {
   await client.patchDaemonConfig({ pluginsEnabled: true });
   for (const directory of directories) await client.installDirectoryPlugin(directory);
   return {
+    reloadIcons: () => client.reloadPlugin(ICONS_PLUGIN_ID),
+    disableIcons: () => client.disablePlugin(ICONS_PLUGIN_ID),
+    enableIcons: () => client.enablePlugin(ICONS_PLUGIN_ID),
     async cleanup() {
-      await client.removePlugin(SHOWCASE_PLUGIN_ID);
-      await client.removePlugin(LEGACY_PLUGIN_ID);
-      await client.removePlugin(BOTS_PLUGIN_ID);
+      for (const [id] of sources) await client.removePlugin(id);
       await client.patchDaemonConfig({ pluginsEnabled: config.config.pluginsEnabled });
       await client.close();
       await Promise.all(

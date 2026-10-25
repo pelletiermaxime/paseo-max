@@ -22,6 +22,7 @@ function plugin(input: {
     settingsScreens: [],
     surfaces: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     filePanels: [],
     workspacePanels: [],
