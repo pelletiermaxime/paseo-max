@@ -90,6 +90,15 @@ export interface PluginSidebarItemContribution<Text extends PluginText = string>
   Component: ComponentType<PluginSidebarItemProps>;
 }
 
+/** A host-drawn compact action in the sidebar's fixed bottom icon row. */
+export interface PluginSidebarFooterIconContribution<Text extends PluginText = string> {
+  id: string;
+  /** Settings label, accessible name, and tooltip; resolved in the app's locale. */
+  title: Text;
+  icon: PluginIcon;
+  onPress(context: PluginGlobalCommandContext): void | Promise<void>;
+}
+
 /**
  * A Lucide icon name, inline SVG markup, or a component. Components receive the surface's size
  * and color; buttons widen the props with their host and target context.
@@ -196,6 +205,10 @@ export interface PluginClientContext extends PluginCommandCapabilities, PluginCl
   addScreen(contribution: PluginScreenContribution<PluginText>): PluginCleanup;
   addSidebarHeaderItem(contribution: PluginSidebarItemContribution<PluginText>): PluginCleanup;
   addSidebarFooterItem(contribution: PluginSidebarItemContribution<PluginText>): PluginCleanup;
+  /** Absent on clients without fixed sidebar icon contributions. */
+  addSidebarFooterIcon?(
+    contribution: PluginSidebarFooterIconContribution<PluginText>,
+  ): PluginCleanup;
   addAgentPanel(contribution: PluginAgentPanelContribution<PluginText>): PluginCleanup;
   addWorkspacePanel(contribution: PluginWorkspacePanelContribution<PluginText>): PluginCleanup;
   addCommandCenterItem(

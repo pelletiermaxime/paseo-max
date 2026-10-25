@@ -8,12 +8,18 @@ import type {
   PluginSidebarContribution,
   PluginSidebarItemContribution,
   PluginSidebarSection,
+  PluginSidebarFooterIconContribution,
 } from "./types";
 import type { PluginIcon } from "@getpaseo/plugin/client";
 
 export interface PluginSidebarTarget {
   plugin: InstalledPlugin;
   item: PluginSidebarItemContribution;
+}
+
+export interface PluginSidebarFooterIconTarget {
+  plugin: InstalledPlugin;
+  item: PluginSidebarFooterIconContribution;
 }
 
 // COMPAT(pluginSidebarAliases): added in v0.11.0, remove after 2027-03-29
@@ -35,6 +41,11 @@ interface PluginSidebarGroupBase {
  */
 export type PluginSidebarGroup =
   | (PluginSidebarGroupBase & { kind: "item"; targets: PluginSidebarTarget[] })
+  | (PluginSidebarGroupBase & {
+      kind: "icon";
+      icon: PluginIcon;
+      targets: PluginSidebarFooterIconTarget[];
+    })
   | (PluginSidebarGroupBase & {
       kind: "legacy";
       icon: PluginIcon;
@@ -81,6 +92,23 @@ export function groupPluginSidebarItems(
           pluginId: plugin.id,
           contributionId: item.id,
           title: plugin.i18n.resolve(item.title, plugin.locale),
+          targets: [{ plugin, item }],
+        });
+      }
+    }
+    if (section !== "footer") continue;
+    for (const item of plugin.sidebarFooterIcons) {
+      const key = `${plugin.id}/sidebar-footer-icon/${item.id}`;
+      const existing = groups.get(key);
+      if (existing?.kind === "icon") existing.targets.push({ plugin, item });
+      else if (!existing) {
+        groups.set(key, {
+          kind: "icon",
+          key,
+          pluginId: plugin.id,
+          contributionId: item.id,
+          title: plugin.i18n.resolve(item.title, plugin.locale),
+          icon: item.icon,
           targets: [{ plugin, item }],
         });
       }

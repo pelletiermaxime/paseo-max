@@ -34,6 +34,7 @@ function installation(invoked: string[]): InstalledPlugin {
     settingsScreens: [],
     surfaces: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     filePanels: [],
     workspacePanels: [],

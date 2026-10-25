@@ -1226,11 +1226,73 @@ screen with other params shows the new params.
 ### Sidebar items
 
 `addSidebarHeaderItem` adds a row to the list at the top of the sidebar. `addSidebarFooterItem`
-adds a row to the footer, between **Add project** and the footer's icon row. The icon row is fixed;
-plugins can't add to it. Both take `{ id, title, Component }`. `title` labels the item in
+adds a full-width row above the footer's fixed icon row. Both take `{ id, title, Component }`. `title` labels the item in
 Settings > Sidebar, where users reorder and hide items, and is the default label and accessibility
 label of `SidebarRow`. Settings shows a generic plugin icon for these items; a row from the
 deprecated `addSidebarItem` keeps its registered icon.
+
+#### Compact footer icons in Paseo Max
+
+Paseo Max also provides optional `addSidebarFooterIcon({ id, title, icon, onPress })`.
+It adds a compact action inside the fixed bottom icon row alongside the built-in actions.
+`PluginSidebarFooterIconContribution` is exported from `@getpaseo/plugin/client`.
+The callback receives `PluginGlobalCommandContext`, including the selected installation's
+`paseo`, `rpc`, `openScreen`, and `openSettings` capabilities. It may return a promise;
+the button is disabled while it runs and callback errors appear in a toast.
+
+`title` accepts the same [display text](#runtime-translations) as other contributions and supplies
+the accessible name, tooltip, and settings label. `icon` accepts the existing `PluginIcon` forms:
+a Lucide name, safe inline SVG, or a component receiving size and color. The host owns keyboard
+activation, density, and press feedback. Compact layouts use 44-pixel touch targets. When icons
+outgrow the available width, the plugin section scrolls horizontally; built-in actions stay visible.
+
+Settings > Sidebar > Footer controls plugin icon visibility and order. Icons follow their order
+among other icons; rows remain above the icon row. IDs are scoped to the plugin and to this
+contribution type, so a footer row and icon may share a local ID without sharing preferences.
+The returned cleanup function removes the icon and may be called repeatedly. Registration also
+works after setup; disabling, unloading, disconnecting, or reloading the plugin removes its old
+registrations. A reload does not accumulate icons.
+
+The icon selects its host using the same rule as sidebar rows below. `context.openScreen` opens
+this plugin's screen on that host and dismisses the compact navigation drawer before navigation.
+Plugins do not need access to internal navigation stores.
+
+Feature-detect the method on the **client**, since official Paseo versions may not provide it.
+Keep the existing row as an exclusive fallback. An SDK version or daemon version alone does not
+prove the connected app supports this API:
+
+```tsx
+import type { PluginClientContext, PluginSidebarItemProps } from "@getpaseo/plugin/client";
+import { SidebarRow } from "@getpaseo/plugin/client/ui";
+import { UsageScreen } from "./client/usage";
+
+function UsageRow({ openScreen }: PluginSidebarItemProps) {
+  return (
+    <SidebarRow icon="ChartNoAxesCombined" onPress={() => openScreen({ screenId: "usage" })} />
+  );
+}
+
+export default function contribute(client: PluginClientContext) {
+  client.addScreen({ id: "usage", title: "Usage", Component: UsageScreen });
+  if (typeof client.addSidebarFooterIcon === "function") {
+    client.addSidebarFooterIcon({
+      id: "usage",
+      title: "Usage",
+      icon: "ChartNoAxesCombined",
+      onPress(context) {
+        context.openScreen({ screenId: "usage" });
+      },
+    });
+  } else {
+    client.addSidebarFooterItem({ id: "usage", title: "Usage", Component: UsageRow });
+  }
+  return () => {};
+}
+```
+
+Use the Paseo Max SDK declarations when typechecking this optional method. The feature check
+keeps the resulting client bundle usable on official versions without it. Keep the manifest's
+Paseo requirements compatible with the oldest client APIs used by the fallback.
 
 With the plugin on several hosts, an item renders from the host of the screen the app shows. Off a
 host's screens, it uses the host last picked in one of the plugin's screens or last opened from one

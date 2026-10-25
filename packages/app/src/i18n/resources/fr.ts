@@ -2535,7 +2535,7 @@ export const fr: TranslationResources = {
         footer: {
           title: "Pied de page",
           description:
-            "Choisissez les lignes affichées en bas de la barre latérale et leur ordre. « Ajouter un projet » et la rangée d’icônes restent toujours visibles",
+            "Choisissez les lignes et les icônes de plugins affichées en bas et leur ordre. Les actions intégrées restent toujours visibles",
         },
         moveUp: "Monter",
         moveDown: "Descendre",
