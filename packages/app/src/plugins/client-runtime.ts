@@ -1,3 +1,4 @@
+import { createWorkspaceResources } from "@/desktop/browser/hibernation";
 import { createPlayAudio, type AudioEngine } from "@/audio";
 import { getPluginClientApi } from "./client-state/api";
 import type { PluginClientOpenPanelOptions } from "@getpaseo/plugin/client";
@@ -24,6 +25,11 @@ export function createPluginClientRuntime(
   );
   return {
     ...capabilities,
+    workspaceResources: createWorkspaceResources({
+      serverId: installation.serverId,
+      ownerId: installation.id,
+      signal: installation.lifetime.signal,
+    }),
     i18n: installation.i18n,
     playAudio: createPlayAudio(audio, installation.lifetime.signal),
     hosts: getPluginClientApi(installation).hosts,
