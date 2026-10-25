@@ -38,9 +38,11 @@ the downloaded file executable. The workflow plugin integration still needs to
 be installed separately in the fork's daemon.
 
 Build runs also keep a combined Actions artifact for 14 days. To publish a build
-that already passed, set the workflow's `source_run_id` to its successful run ID
-and use that artifact's package version. This verifies checksums and provenance
-and publishes the existing packages without rebuilding them.
+that already passed, first create its `paseo-max-v<package-version>` tag at the
+commit recorded in `BUILD.txt`, using maintainer Git credentials. Set the
+workflow's `source_run_id` to its successful run ID and use that artifact's
+package version. This verifies checksums and provenance and publishes the
+existing packages without rebuilding them. Fresh builds create their own tag.
 
 The Paseo overview and installation links below describe upstream; upstream
 downloads do not include this fork's hibernation feature.
