@@ -1,4 +1,9 @@
 import {
+  useBrowserHibernation,
+  wakeBrowser,
+  setBrowserKeepAwake,
+} from "../hibernation/index.electron";
+import {
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -29,6 +34,7 @@ import {
   ChevronDown,
   Maximize,
   Monitor,
+  Pin,
   MousePointer2,
   RotateCw,
   Smartphone,
@@ -849,6 +855,14 @@ export function BrowserPane({
   const browserViewportRef = useRef(browserViewport);
   browserViewportRef.current = browserViewport;
   const isPresented = useRetainedPanelActive();
+  const isSleeping = useBrowserHibernation((state) => state.sleeping.has(browserId));
+  const keepAwake = useBrowserHibernation((state) => state.keptAwake.has(browserId));
+  const toggleKeepAwake = useCallback(() => {
+    setBrowserKeepAwake(browserId, !keepAwake);
+  }, [browserId, keepAwake]);
+  useEffect(() => {
+    if (isPresented && isSleeping) wakeBrowser(browserId);
+  }, [browserId, isPresented, isSleeping]);
   const isPresentedRef = useRef(isPresented);
   isPresentedRef.current = isPresented;
   const webviewRef = useRef<ElectronWebview | null>(null);
@@ -969,6 +983,8 @@ export function BrowserPane({
     if (!isElectronRuntime()) {
       return;
     }
+
+    if (isSleeping) return;
 
     const host = webviewHostRef.current;
     const clip = webviewClipRef.current;
@@ -1148,7 +1164,10 @@ export function BrowserPane({
       const browserStillExists = Boolean(
         useBrowserStore.getState().browsersById[browserIdRef.current],
       );
-      if (browserStillExists) {
+      if (
+        browserStillExists &&
+        !useBrowserHibernation.getState().sleeping.has(browserIdRef.current)
+      ) {
         releaseResidentBrowserWebview(browserIdRef.current, webview);
       } else {
         removeResidentBrowserWebview(browserIdRef.current);
@@ -1159,7 +1178,7 @@ export function BrowserPane({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePartition, browserId, onFocusPane, workspaceId]);
+  }, [activePartition, browserId, onFocusPane, workspaceId, isSleeping]);
 
   useEffect(() => {
     const webview = webviewRef.current;
@@ -1184,7 +1203,7 @@ export function BrowserPane({
     } else {
       rememberResolvedBrowserWebviewSize(browserId, webview);
     }
-  }, [browserId, browserViewport, isPresented]);
+  }, [browserId, browserViewport, isPresented, isSleeping]);
 
   const navigate = useCallback(
     (nextUrl: string) => {
@@ -1700,6 +1719,20 @@ export function BrowserPane({
     <View style={styles.container}>
       <View style={styles.chromeRow}>
         <View style={styles.chromeLeft}>
+          <ToolbarButton
+            label={
+              keepAwake
+                ? t("workspace.browser.controls.allowHibernation")
+                : t("workspace.browser.controls.keepAwake")
+            }
+            onPress={toggleKeepAwake}
+            style={baseIconButtonStyle}
+          >
+            <Pin
+              size={16}
+              color={keepAwake ? theme.colors.foreground : theme.colors.foregroundMuted}
+            />
+          </ToolbarButton>
           <ToolbarButton
             label={t("workspace.browser.controls.back")}
             disabled={!browser?.canGoBack}
