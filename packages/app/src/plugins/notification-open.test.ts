@@ -85,6 +85,7 @@ function makeInstalledPlugin(input: {
     settingsScreens: [],
     sidebarViews: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     workspaceRowBadgeItems: [],
     filePanels: [],

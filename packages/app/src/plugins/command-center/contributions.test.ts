@@ -105,6 +105,7 @@ function plugin(onAgentSelect: AgentCommandItem["onSelect"]): InstalledPlugin {
     surfaces: [{ id: "main", title: "Main", Component: () => null }],
     sidebarViews: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     workspaceRowBadgeItems: [],
     filePanels: [],
