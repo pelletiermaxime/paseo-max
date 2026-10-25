@@ -118,7 +118,7 @@ exports.default = async function afterPack(context) {
   pruneNativeModules(context.appOutDir, platform, arch);
 
   if (platform === "linux") {
-    installLinuxLauncher(context.appOutDir);
+    installLinuxLauncher(context.appOutDir, context.packager.config.executableName);
   }
 
   if (platform === "linux" || platform === "win32") {
