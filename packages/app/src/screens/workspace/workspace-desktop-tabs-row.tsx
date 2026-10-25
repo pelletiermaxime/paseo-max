@@ -1073,6 +1073,7 @@ function ResolvedWorkspaceDesktopTabsRow({
   const newTabKeys = useShortcutKeys("workspace-tab-new");
   const [tabsContainerWidth, setTabsContainerWidth] = useState<number>(0);
   const tabsScrollRef = useRef<ScrollView>(null);
+  const tabsWheelRef = useRef<View>(null);
   const [exitFocusModeWidth, setExitFocusModeWidth] = useState<number>(0);
   const tabScrollBoundary = useHorizontalScrollBoundary();
   const [labelMeasurements, setLabelMeasurements] = useState(
@@ -1244,6 +1245,35 @@ function ResolvedWorkspaceDesktopTabsRow({
     }
   }, [layout.requiresHorizontalScrollFallback]);
 
+  useEffect(() => {
+    if (!isWeb || activeDragTabId !== null) return;
+    const view = tabsWheelRef.current;
+    if (!(view instanceof HTMLElement)) return;
+    const node: HTMLElement = view;
+
+    function handleWheel(event: WheelEvent) {
+      const hasModifier = event.ctrlKey || event.metaKey || event.altKey || event.shiftKey;
+      const isVerticalScroll = Math.abs(event.deltaY) > Math.abs(event.deltaX);
+      if (hasModifier || !isVerticalScroll || displayedTabs.length < 2) return;
+      const activeIndex = displayedTabs.findIndex((item) => item.isActive);
+      if (activeIndex < 0) return;
+
+      event.preventDefault();
+      const nextIndex = activeIndex + Math.sign(event.deltaY);
+      const nextTab = displayedTabs[nextIndex];
+      if (!nextTab) return;
+
+      onNavigateTab(nextTab.tab.tabId);
+      node
+        .querySelectorAll<HTMLElement>("[aria-selected]")
+        .item(nextIndex)
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+
+    node.addEventListener("wheel", handleWheel, { passive: false });
+    return () => node.removeEventListener("wheel", handleWheel);
+  }, [activeDragTabId, displayedTabs, onNavigateTab]);
+
   const handleDragEnd = useCallback(
     (nextTabs: ResolvedWorkspaceDesktopTabRowItem[]) => {
       onReorderTabs(nextTabs.map((tab) => tab.tab));
@@ -1403,7 +1433,7 @@ function ResolvedWorkspaceDesktopTabsRow({
         onPress={onExitFocusMode}
         onLayout={handleExitFocusModeLayout}
       />
-      <View style={styles.tabsScrollContainer}>
+      <View ref={tabsWheelRef} style={styles.tabsScrollContainer}>
         <Animated.ScrollView
           ref={tabsScrollRef}
           horizontal
