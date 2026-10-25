@@ -130,6 +130,7 @@ export function runPluginClientBundle(
     surfaces: [],
     settingsScreens: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     filePanels: [],
     workspacePanels: [],
@@ -141,6 +142,7 @@ export function runPluginClientBundle(
     timelineRenderers: [],
   };
   const surfaceIds = new Set<string>();
+  const sidebarFooterIconIds = new Set<string>();
   const settingsScreenIds = new Set<string>();
   const sidebarItemIds: Record<PluginSidebarSection, Set<string>> = {
     header: new Set(),
@@ -275,6 +277,25 @@ export function runPluginClientBundle(
     },
     addSidebarFooterItem(contribution: PluginSidebarItemContribution) {
       return addSidebarItem("footer", contribution);
+    },
+    addSidebarFooterIcon(contribution) {
+      if (stopped) throw new Error("Plugin has stopped");
+      const iconId = requireId(contribution.id, "sidebar footer icon id");
+      if (sidebarFooterIconIds.has(iconId)) {
+        throw new Error(`Duplicate sidebar footer icon: ${iconId}`);
+      }
+      const title = normalizePluginText(contribution.title);
+      if (!title) throw new Error(`Sidebar footer icon ${iconId} has no title`);
+      const icon = parsePluginIcon(`Sidebar footer icon ${iconId}`, contribution.icon);
+      if (typeof contribution.onPress !== "function") {
+        throw new Error(`Sidebar footer icon ${iconId} has no callback`);
+      }
+      sidebarFooterIconIds.add(iconId);
+      return register(
+        collector.sidebarFooterIcons,
+        { id: iconId, title, icon, onPress: contribution.onPress },
+        () => sidebarFooterIconIds.delete(iconId),
+      );
     },
     // COMPAT(pluginSidebarAliases): added in v0.11.0, remove after 2027-03-29
     // Titled by its id; a legacy item pointing at it lends the header its own title instead.
@@ -584,6 +605,7 @@ export function runPluginClientBundle(
     surfaces: collector.surfaces,
     settingsScreens: collector.settingsScreens,
     sidebarItems: collector.sidebarItems,
+    sidebarFooterIcons: collector.sidebarFooterIcons,
     legacySidebarItems: collector.legacySidebarItems,
     filePanels: collector.filePanels,
     workspacePanels: collector.workspacePanels as EvaluatedPlugin["workspacePanels"],

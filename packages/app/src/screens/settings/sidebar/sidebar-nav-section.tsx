@@ -60,7 +60,7 @@ const ThemedNavIcon = withUnistyles(NavIcon);
 
 function navItemIcon(item: SidebarNavItem): NavIconComponent {
   if (item.kind === "builtin") return BUILTIN_ICONS[item.id];
-  return item.group.kind === "legacy" ? pluginIconComponent(item.group.icon) : PLUGIN_ICON;
+  return item.group.kind === "item" ? PLUGIN_ICON : pluginIconComponent(item.group.icon);
 }
 
 function navItemLabel(t: TFunction, item: SidebarNavItem): string {
@@ -181,7 +181,7 @@ function SidebarItemsCard({ section }: { section: SidebarSection }): ReactElemen
   );
 }
 
-/** Settings > Sidebar: one card per section. The footer's bottom line is fixed and not listed. */
+/** Settings > Sidebar: footer rows and plugin icons share ordering and visibility preferences. */
 export function SidebarNavSection(): ReactElement {
   return (
     <>

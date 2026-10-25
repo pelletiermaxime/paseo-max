@@ -8,6 +8,11 @@ import {
   rememberPluginContributionHost,
 } from "./contribution-host";
 import { groupPluginSidebarItems, selectPluginSidebarTarget } from "./sidebar-groups";
+import { pressPluginSidebarFooterIcon } from "./sidebar-items/footer-icon-action";
+import type { PluginNavigation } from "./actions";
+import { defineRpc } from "@getpaseo/plugin";
+import { z } from "zod";
+import { defineTranslations } from "@getpaseo/plugin/client";
 
 function installed(
   serverId: string,
@@ -32,6 +37,7 @@ function installed(
       header: [{ id: contributionId, title: "Example", Component: () => null }],
       footer: [{ id: "status", title: "Status", Component: () => null }],
     },
+    sidebarFooterIcons: [],
     legacySidebarItems,
     filePanels: [],
     workspacePanels: [],
@@ -45,6 +51,42 @@ function installed(
 }
 
 describe("groupPluginSidebarItems", () => {
+  it("coalesces footer icons across hosts, isolates plugins and row ids, and resolves titles", () => {
+    const plugins = [
+      installed("host-a"),
+      installed("host-b"),
+      installed("host-a", "main", [], "other"),
+    ];
+    const translations = defineTranslations({
+      resources: { en: { usage: "Usage" }, fr: { usage: "Utilisation" } },
+    });
+    for (const plugin of plugins) {
+      plugin.locale = "fr";
+      plugin.sidebarFooterIcons.push({
+        id: "status",
+        title: translations.message("usage"),
+        icon: "Activity",
+        onPress() {},
+      });
+    }
+    const groups = groupPluginSidebarItems(plugins, "footer");
+    expect(groups.map(({ kind, key }) => ({ kind, key }))).toEqual([
+      { kind: "item", key: "example/sidebar-footer/status" },
+      { kind: "icon", key: "example/sidebar-footer-icon/status" },
+      { kind: "item", key: "other/sidebar-footer/status" },
+      { kind: "icon", key: "other/sidebar-footer-icon/status" },
+    ]);
+    const icon = groups[1]!;
+    expect(icon.title).toBe("Utilisation");
+    expect(icon.targets).toHaveLength(2);
+    expect(selectPluginSidebarTarget(icon, "host-b").plugin.serverId).toBe("host-b");
+    rememberPluginContributionHost(pluginScreensHostKey("example"), "host-b");
+    expect(selectPluginSidebarTarget(icon, null).plugin.serverId).toBe("host-b");
+    expect(selectPluginSidebarTarget(icon, "absent").plugin.serverId).toBe("host-b");
+    expect(groupPluginSidebarItems(plugins, "header").some((group) => group.kind === "icon")).toBe(
+      false,
+    );
+  });
   it("coalesces the same plugin contribution across hosts", () => {
     const groups = groupPluginSidebarItems([installed("host-a"), installed("host-b")], "header");
 
@@ -117,5 +159,103 @@ describe("selectPluginSidebarTarget", () => {
   it("keeps a legacy row's host under its own key", () => {
     rememberPluginContributionHost(legacySidebarItemHostKey("legacy-row", "entry"), "host-b");
     expect(hostsOf("header", "legacy-row")).toEqual(["host-b", "host-a"]);
+  });
+});
+
+describe("footer icon actions", () => {
+  it("uses the selected host's API, RPC and plugin navigation, dismissing before delayed navigation", async () => {
+    const calls: unknown[] = [];
+    const plugin = installed("host-b");
+    const rpc = defineRpc({ name: "usage.read", input: z.object({}), output: z.string() });
+    plugin.invoke = async (method) => {
+      calls.push([plugin.serverId, method]);
+      return "host-b";
+    };
+    plugin.settingsScreens.push({
+      id: "settings",
+      title: "Settings",
+      icon: "Settings",
+      Component: () => null,
+    });
+    const navigation: PluginNavigation = {
+      openSurface: (...args) => {
+        calls.push([plugin.serverId, ...args]);
+      },
+      openSettings: (...args) => {
+        calls.push([plugin.serverId, ...args]);
+      },
+      openWorkspacePanel() {
+        throw new Error("Unexpected panel");
+      },
+      openAgentPanel() {
+        throw new Error("Unexpected panel");
+      },
+    };
+    await pressPluginSidebarFooterIcon({
+      target: {
+        plugin,
+        item: {
+          id: "usage",
+          title: "Usage",
+          icon: "Activity",
+          async onPress(context) {
+            expect(context.context).toBe("global");
+            expect(context.paseo).toBe(plugin.paseo);
+            expect(await context.rpc(rpc, {})).toBe("host-b");
+            context.openScreen({ screenId: "surface", params: { range: "week" } });
+            context.openSettings("settings");
+          },
+        },
+      },
+      navigation,
+      onBeforeNavigate() {
+        calls.push("dismiss");
+      },
+    });
+    expect(calls).toEqual([
+      ["host-b", "usage.read"],
+      "dismiss",
+      ["host-b", "example", "surface", { range: "week" }],
+      "dismiss",
+      ["host-b", "example", "settings"],
+    ]);
+  });
+
+  it("does not dismiss for invalid destinations or execute an unloaded installation", async () => {
+    const plugin = installed("host-a");
+    let dismissed = false;
+    let navigated = false;
+    const navigation: PluginNavigation = {
+      openSurface() {
+        navigated = true;
+      },
+      openSettings() {
+        navigated = true;
+      },
+      openWorkspacePanel() {},
+      openAgentPanel() {},
+    };
+    const input = {
+      target: {
+        plugin,
+        item: {
+          id: "usage",
+          title: "Usage",
+          icon: "Activity",
+          onPress(context: import("@getpaseo/plugin/client").PluginGlobalCommandContext) {
+            context.openScreen({ screenId: "missing" });
+          },
+        },
+      },
+      navigation,
+      onBeforeNavigate() {
+        dismissed = true;
+      },
+    };
+    await expect(pressPluginSidebarFooterIcon(input)).rejects.toThrow("unavailable");
+    expect(dismissed).toBe(false);
+    plugin.lifetime.abort();
+    await pressPluginSidebarFooterIcon(input);
+    expect(navigated).toBe(false);
   });
 });

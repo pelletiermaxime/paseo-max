@@ -30,6 +30,7 @@ function installation(
     settingsScreens: [],
     surfaces: surfaces.map((id) => ({ id, title: id, Component: () => null })),
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: sidebarItems.map((item) => ({
       ...item,
       title: item.id,
