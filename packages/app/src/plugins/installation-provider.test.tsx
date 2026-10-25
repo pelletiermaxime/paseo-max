@@ -49,6 +49,7 @@ function installation(invoked: string[]): InstalledPlugin {
     surfaces: [],
     sidebarViews: [],
     sidebarItems: { header: [], footer: [] },
+    sidebarFooterIcons: [],
     legacySidebarItems: [],
     workspaceRowBadgeItems: [],
     filePanels: [],
