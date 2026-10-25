@@ -1,3 +1,4 @@
+import { createWorkspaceResources } from "@/desktop/browser/hibernation";
 import { createPlayAudio, type AudioEngine } from "@/audio";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
 import { createPluginHosts } from "./hosts";
@@ -24,6 +25,11 @@ export function createPluginClientRuntime(
   );
   return {
     ...capabilities,
+    workspaceResources: createWorkspaceResources({
+      serverId: installation.serverId,
+      ownerId: installation.id,
+      signal: installation.lifetime.signal,
+    }),
     i18n: installation.i18n,
     playAudio: createPlayAudio(audio, installation.lifetime.signal),
     hosts: createPluginHosts(getHostRuntimeStore(), installation.lifetime.signal),

@@ -173,7 +173,22 @@ interface PluginClientContextAliases {
   addSidebarItem(contribution: PluginSidebarContribution<PluginText>): PluginCleanup;
 }
 
+export interface PluginWorkspaceBrowserPolicy {
+  workspaceId: string;
+  browserTabs: {
+    /** null disables this plugin's policy. Minimum: 1000 ms. */
+    hibernateAfterWorkspaceInactiveMs: number | null;
+  };
+}
+
+export interface PluginWorkspaceResources {
+  /** Scoped to this plugin's host. Policies last until replaced or the plugin unloads. */
+  setPolicy(policy: PluginWorkspaceBrowserPolicy): void;
+}
+
 export interface PluginClientContext extends PluginCommandCapabilities, PluginClientContextAliases {
+  /** Electron only. Absent on hosts without browser hibernation. */
+  readonly workspaceResources?: PluginWorkspaceResources;
   readonly i18n: import("./translations.js").PluginI18n;
   /** Play a base64-encoded audio file on this client; resolves when playback ends. */
   playAudio(source: { base64: string; mimeType: string }): Promise<void>;

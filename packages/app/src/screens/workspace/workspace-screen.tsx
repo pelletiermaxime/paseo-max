@@ -1,4 +1,5 @@
 import { planTimelineTailFetch } from "@/timeline/timeline-sync-plan";
+import { forgetBrowserHibernation, viewBrowserWorkspace } from "@/desktop/browser/hibernation";
 import { useHostFeature } from "@/runtime/host-features";
 import {
   AssistantFileLinkResolverProvider,
@@ -427,6 +428,11 @@ export const WorkspaceScreen = memo(function WorkspaceScreen({
   // every panel, and the panels render readers.
   ensurePanelsRegistered();
   const navigationFocused = useIsFocused();
+  const workspaceVisible = isRouteFocused ?? navigationFocused;
+  useEffect(() => {
+    if (!workspaceVisible) return;
+    return viewBrowserWorkspace({ serverId, workspaceId });
+  }, [serverId, workspaceId, workspaceVisible]);
   useEffect(() => {
     traceInstant("paseo.workspace.mount", { serverId, workspaceId });
     return () => {
@@ -1379,6 +1385,7 @@ function WorkspaceScreenContent({
       }
       if (input.target?.kind === "browser") {
         const { browserId } = input.target;
+        forgetBrowserHibernation(browserId);
         useBrowserStore.getState().removeBrowser(browserId);
         removeResidentBrowserWebview(browserId);
         void getDesktopHost()?.browser?.unregisterWorkspaceBrowser?.(browserId);
