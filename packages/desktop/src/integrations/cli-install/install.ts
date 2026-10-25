@@ -4,6 +4,7 @@ import log from "electron-log/main";
 import { resolveCliInstallSourcePath } from "./path.js";
 import { getBundledCliShimPath, getCliTargetPath, getLocalBinDir } from "./paths.js";
 import { ensurePathInShellRc } from "./shell-rc.js";
+import { isPaseoMax } from "../../fork-runtime.js";
 
 interface InstallStatus {
   installed: boolean;
@@ -19,6 +20,7 @@ async function pathOrSymlinkExists(p: string): Promise<boolean> {
 }
 
 export async function installCli(): Promise<InstallStatus> {
+  if (isPaseoMax) throw new Error("Global CLI installation is disabled in Paseo Max.");
   const targetPath = getCliTargetPath();
   const shimPath = getBundledCliShimPath();
   const installSourcePath = resolveCliInstallSourcePath({
@@ -66,6 +68,7 @@ export async function installCli(): Promise<InstallStatus> {
 }
 
 export async function getCliInstallStatus(): Promise<InstallStatus> {
+  if (isPaseoMax) return { installed: false };
   const targetPath = getCliTargetPath();
   return { installed: await pathOrSymlinkExists(targetPath) };
 }
