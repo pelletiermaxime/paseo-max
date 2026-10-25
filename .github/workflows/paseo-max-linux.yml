@@ -69,6 +69,9 @@ jobs:
             sourceSha = run.head_sha;
           }
           const ref = refs.find(ref => ref.ref === `refs/tags/${tag}`);
+          if (process.env.SOURCE_RUN_ID && !ref) {
+            throw new Error(`Before promoting a historical build, create ${tag} at ${sourceSha} with maintainer Git credentials.`);
+          }
           if (ref) {
             let object = ref.object;
             if (object.type === 'tag') {
