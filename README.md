@@ -1,3 +1,30 @@
+# Paseo Max
+
+An experimental fork of [Paseo](https://github.com/getpaseo/paseo), based on
+upstream v0.13.0, with desktop browser hibernation.
+
+Client plugins can configure an inactivity timeout per workspace through the
+optional [`workspaceResources` API](public-docs/plugins/reference.md#hibernate-inactive-workspace-browsers).
+Inactive, unpinned pages unload while their tabs, URLs and browser profile remain.
+Sleeping tabs appear faded and reload when selected or used through automation.
+Use the browser toolbar's pin to keep a tab awake for the current session.
+Hibernation discards unsaved page state and bypasses page unload warnings.
+
+Automatic hibernation requires a plugin to set the policy. The workflow plugin's
+settings integration is maintained separately and is not bundled in this repo.
+
+Fork source tags use `paseo-max-v<upstream-version>-<fork-revision>`, starting with
+`paseo-max-v0.13.0-1`. Package versions still match the upstream base; these tags
+do not publish npm packages or provide desktop installers. GitHub Actions are
+initially disabled in this repository because the inherited workflows include
+upstream deployment and publishing jobs.
+
+The final source snapshot has not had a fresh packaged build and full Electron
+validation. The Paseo overview and installation links below describe upstream;
+upstream downloads do not include this fork's hibernation feature.
+
+---
+
 <p align="center">
   <img src="packages/website/public/logo.svg" width="64" height="64" alt="Paseo logo">
 </p>

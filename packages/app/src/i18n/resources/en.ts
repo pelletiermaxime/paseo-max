@@ -570,6 +570,7 @@ export const en = {
       },
     },
     browser: {
+      hibernated: "Hibernated",
       unavailable: {
         title: "Browser is desktop-only",
         subtitle: "Open this workspace in Electron to use the built-in browser.",
@@ -581,6 +582,8 @@ export const en = {
         stopLoading: "Stop loading",
         refresh: "Refresh",
         browserUrl: "Browser URL",
+        keepAwake: "Keep this tab awake",
+        allowHibernation: "Allow this tab to hibernate",
         enterUrl: "Enter URL",
         openDevTools: "Open browser dev tools",
         cancelSelector: "Cancel element selector",
