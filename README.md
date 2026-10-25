@@ -13,12 +13,15 @@ Hibernation discards unsaved page state and bypasses page unload warnings.
 Automatic hibernation requires a plugin to set the policy. The workflow plugin's
 settings integration is maintained separately and is not bundled in this repo.
 
-Fork source tags use `paseo-max-v<upstream-version>-<fork-revision>`, starting with
-`paseo-max-v0.13.0-1`. These tags do not publish npm packages. The manual
-[Linux build workflow](.github/workflows/paseo-max-linux.yml) creates x64 AppImage,
-Debian, RPM and tar.gz packages as downloadable Actions artifacts, retained for
-14 days. Package versions use `0.13.0-max.1` and are applied only on the build
-runner. Inherited deployment and publishing workflows remain disabled.
+The original source snapshot is tagged `paseo-max-v0.13.0-1`. Binary prereleases
+use `paseo-max-v<package-version>`, starting with `paseo-max-v0.13.0-max.1`, and
+point to the commit that produced their packages. The manual
+[Linux build workflow](.github/workflows/paseo-max-linux.yml) builds and checks
+x64 packages, then publishes a GitHub prerelease with AppImage, Debian, RPM and
+tar.gz downloads. Choose a new package version for each release; existing tags
+are never overwritten. Versions such as `0.13.0-max.2` are applied only on the
+build runner. No npm packages are published, and inherited deployment and
+publishing workflows remain disabled.
 
 The Linux build uses the name Paseo Max, a separate desktop entry and protocol,
 the profile `~/.config/Paseo Max`, and daemon home `~/.paseo-max` on
@@ -28,11 +31,16 @@ explicit state overrides, use `PASEO_MAX_USER_DATA`, `PASEO_MAX_HOME` and
 The build runs upstream's packaged-app smoke check on the GitHub runner using
 temporary state. This does not cover the complete hibernation user journey.
 
-Download the package artifact from a successful **Paseo Max Linux Build** run in
-Actions. The artifact includes `SHA256SUMS` and `BUILD.txt` with the source commit.
+Download individual packages from [Releases](https://github.com/pelletiermaxime/paseo-max/releases).
+Each prerelease includes `SHA256SUMS` and `BUILD.txt` with the source commit.
 For the tar.gz, extract it and run `./PaseoMax`; AppImage users must first make
 the downloaded file executable. The workflow plugin integration still needs to
 be installed separately in the fork's daemon.
+
+Build runs also keep a combined Actions artifact for 14 days. To publish a build
+that already passed, set the workflow's `source_run_id` to its successful run ID
+and use that artifact's package version. This verifies checksums and provenance
+and publishes the existing packages without rebuilding them.
 
 The Paseo overview and installation links below describe upstream; upstream
 downloads do not include this fork's hibernation feature.
