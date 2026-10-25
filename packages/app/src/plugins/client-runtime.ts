@@ -1,6 +1,7 @@
 import { createWorkspaceResources } from "@/desktop/browser/hibernation";
 import { createPlayAudio, type AudioEngine } from "@/audio";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
+import { createPluginComposer } from "@/composer/plugin-suggestions";
 import { createPluginHosts } from "./hosts";
 import type { PluginClientOpenPanelOptions } from "@getpaseo/plugin/client";
 import { subscribePluginRpc } from "@getpaseo/plugin/client/host";
@@ -26,6 +27,7 @@ export function createPluginClientRuntime(
   );
   return {
     ...capabilities,
+    composer: createPluginComposer(installation.lifetime.signal),
     workspaceResources: createWorkspaceResources({
       serverId: installation.serverId,
       ownerId: installation.id,
