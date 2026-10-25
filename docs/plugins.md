@@ -86,6 +86,12 @@ plugin before compiling and starting from disk. A failed reload stays failed; Pa
 the old code. Use `enable`, `disable`, and `remove` to manage one plugin. Removing a directory source
 never deletes it. The global `pluginsEnabled` switch remains available.
 
+## Composer suggestions
+
+The optional client-local [`composer.suggestText` API](../public-docs/plugins/reference.md#show-a-composer-suggestion-in-paseo-max)
+shows faint text in the shared composer for keyboard acceptance. Generation stays in the plugin;
+acceptance uses the ordinary draft owner. No daemon RPC or broadcast is involved.
+
 ## Client workspace resources
 
 Client plugins can request desktop browser hibernation with the optional

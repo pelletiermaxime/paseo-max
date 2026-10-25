@@ -1396,6 +1396,19 @@ client.addWorkspacePanel({ id: "review", title: "Review", icon: { svg: reviewIco
 
 未知的名称或违反规则的 SVG 不会渲染任何内容。
 
+### 显示输入框建议 {#show-a-composer-suggestion-in-paseo-max}
+
+`client.composer?.suggestText({ serverId, agentId, text })` 在当前应用窗口中，向指定主机和代理的空输入框显示浅色建议。
+建议不属于草稿，也不会启用发送按钮。聚焦输入框后，按 Tab 或右方向键接受为可编辑草稿；按 Escape 或开始输入可取消建议。
+目前仅支持键盘接受，没有触摸接受按钮。接受后使用普通草稿持久化；未接受的建议不会保存，卸载插件或离开会话时会消失。
+
+请检测 `client.composer` 是否存在。旧版应用不提供此能力。成功结果是 `{ status: "suggested", remove() }`；移除函数只取消该建议。
+已有文字（包括空白）、附件、上传任务或正在提交的消息都会阻止操作。显示和接受时都会重新检查目标和草稿。
+插件负责建议生成、缓存和触发时机；Paseo 只负责显示与接受。
+SDK 导出 `PluginComposer`、`PluginComposerSuggestionInput` 和 `PluginComposerSuggestionResult`。
+预期拒绝状态为 `draft-not-empty`、`composer-unavailable` 或 `submission-in-progress`。
+完整类型与示例见[英文参考](./reference.md#show-a-composer-suggestion-in-paseo-max)。
+
 ## 时间线条目 {#timeline-items}
 
 插件可以用自己的数据和 React Native 渲染器替换 Agent 时间线中的条目。两项注册都是客户端贡献。Paseo 在构建渲染模型时应用转换器，包括每一次实时的流式更新。

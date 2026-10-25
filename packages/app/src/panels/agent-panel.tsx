@@ -1133,6 +1133,7 @@ const ChatAgentReadyContent = memo(function ChatAgentReadyContent({
     textSource,
     editText,
     replaceText,
+    insertTextIfEmpty,
     textReplacement,
     attachments,
     setAttachments,
@@ -1146,6 +1147,7 @@ const ChatAgentReadyContent = memo(function ChatAgentReadyContent({
       textSource,
       editText,
       replaceText,
+      insertTextIfEmpty,
       textReplacement,
       attachments,
       setAttachments,
@@ -1158,6 +1160,7 @@ const ChatAgentReadyContent = memo(function ChatAgentReadyContent({
       textSource,
       editText,
       replaceText,
+      insertTextIfEmpty,
       textReplacement,
       attachments,
       setAttachments,
@@ -1593,6 +1596,9 @@ function ActiveAgentComposer({
         isPaneFocused={isPaneFocused}
         textSource={agentInputDraft.textSource}
         onChangeText={agentInputDraft.editText}
+        onInsertDraftText={
+          agentInputDraft.isHydrated ? agentInputDraft.insertTextIfEmpty : undefined
+        }
         textReplacement={agentInputDraft.textReplacement}
         attachments={agentInputDraft.attachments}
         attachmentScopeKeys={attachmentScopeKeys}
