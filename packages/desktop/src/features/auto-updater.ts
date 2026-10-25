@@ -5,6 +5,7 @@ import { app, autoUpdater as electronAutoUpdater, BrowserWindow } from "electron
 import { UUID } from "builder-util-runtime";
 import log from "electron-log/main";
 import { autoUpdater } from "electron-updater";
+import { isPaseoMax } from "../fork-runtime.js";
 import { getDesktopSettingsStore } from "../settings/desktop-settings-electron.js";
 import {
   createAppUpdateService,
@@ -392,7 +393,7 @@ const appUpdatePacing = createAppUpdatePacing({
 
 const appUpdateService = createAppUpdateService({
   runtime: new ElectronAppUpdateRuntime(),
-  isPackaged: () => app.isPackaged,
+  isPackaged: () => app.isPackaged && !isPaseoMax,
   now: () => Date.now(),
   bucket: async (version) => rolloutBucket(await getStagingUserId(), version),
   pacing: appUpdatePacing,
