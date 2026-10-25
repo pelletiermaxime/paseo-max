@@ -1,5 +1,8 @@
 export type {
   PluginHostProps,
+  PluginComposerSuggestions,
+  PluginComposerSuggestionInput,
+  PluginComposerSuggestionResult,
   PluginWorkspaceResources,
   PluginWorkspaceBrowserPolicy,
   PluginTab,

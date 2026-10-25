@@ -141,3 +141,11 @@ it("keeps historical string descriptor helpers while accepting translated regist
   `),
   ).toEqual([]);
 });
+
+it("public ghost suggestion example typechecks against exported SDK types", () => {
+  const reference = readFileSync(path.join(repository, "public-docs/plugins/reference.md"), "utf8");
+  const section = reference.slice(reference.indexOf("### Show a composer suggestion in Paseo Max"));
+  const code = /```tsx\n([\s\S]*?)\n```/.exec(section)?.[1];
+  if (!code) throw new Error("Missing composer suggestion example");
+  expect(typeErrors(code)).toEqual([]);
+});
