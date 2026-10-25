@@ -1,6 +1,8 @@
 import { protectConsoleStreams } from "./diagnostics/console-streams.js";
 protectConsoleStreams();
 
+import { BrowserHibernationRequests } from "./features/browser-webviews/hibernation.js";
+
 process.emitWarning = (() => {}) as typeof process.emitWarning;
 
 import log from "electron-log/main";
@@ -388,6 +390,95 @@ ipcMain.handle("paseo:get-pending-open-project", (event) => {
 
 ipcMain.handle("paseo:agent-navigation:ready", (event) => {
   return agentNavigationInbox.windowReady(event.sender.id);
+});
+
+const visibleBrowserWorkspacesByHost = new Map<number, Set<string>>();
+const browserHibernationRequests = new BrowserHibernationRequests();
+ipcMain.handle("paseo:browser:workspace-visibility", (event, input: unknown) => {
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("workspaceId" in input) ||
+    !("visible" in input)
+  )
+    throw new Error("Invalid workspace visibility");
+  if (
+    typeof input.workspaceId !== "string" ||
+    !input.workspaceId.trim() ||
+    typeof input.visible !== "boolean"
+  )
+    throw new Error("Invalid workspace visibility");
+  let workspaces = visibleBrowserWorkspacesByHost.get(event.sender.id);
+  if (!workspaces) {
+    workspaces = new Set();
+    visibleBrowserWorkspacesByHost.set(event.sender.id, workspaces);
+    event.sender.once("destroyed", () => {
+      visibleBrowserWorkspacesByHost.delete(event.sender.id);
+      browserHibernationRequests.cancelHost(event.sender.id);
+    });
+  }
+  if (input.visible) workspaces.add(input.workspaceId);
+  else workspaces.delete(input.workspaceId);
+});
+
+ipcMain.handle("paseo:browser:prepare-hibernation", async (event, input: unknown) => {
+  if (
+    typeof input !== "object" ||
+    input === null ||
+    !("browserId" in input) ||
+    typeof input.browserId !== "string" ||
+    !input.browserId.trim() ||
+    !("attemptId" in input) ||
+    typeof input.attemptId !== "string" ||
+    !input.attemptId.trim()
+  )
+    throw new Error("Invalid hibernation attempt");
+  const { browserId, attemptId } = input;
+  const registry = getPaseoBrowserWebviewRegistry();
+  if (registry.hasBrowserInOtherHostWindow(event.sender.id, browserId)) return false;
+  const guest = getPaseoBrowserWebContentsForHostWindow(browserId, event.sender.id);
+  if (!guest) return false;
+  const contentsId = guest.id;
+  const workspaceId = registry.getWorkspaceId(browserId);
+  const hostId = event.sender.id;
+  let snapshot = { url: guest.getURL(), title: guest.getTitle() };
+  return browserHibernationRequests.prepare({
+    hostId,
+    attemptId,
+    guest,
+    canHibernate: () => {
+      if (
+        workspaceId === null ||
+        visibleBrowserWorkspacesByHost.get(hostId)?.has(workspaceId) ||
+        registry.getWebContentsIdForBrowserInHostWindow(hostId, browserId) !== contentsId ||
+        registry.hasBrowserInOtherHostWindow(hostId, browserId)
+      )
+        return false;
+      snapshot = { url: guest.getURL(), title: guest.getTitle() };
+      return true;
+    },
+    onClosed: () => {
+      if (!event.sender.isDestroyed()) {
+        event.sender.send("paseo:browser:hibernated", {
+          browserId,
+          webContentsId: contentsId,
+          ...snapshot,
+        });
+      }
+    },
+  });
+});
+
+ipcMain.handle("paseo:browser:hibernate", (event, attemptId: unknown) => {
+  if (typeof attemptId !== "string" || !attemptId.trim())
+    throw new Error("Invalid hibernation attempt");
+  return browserHibernationRequests.commit(event.sender.id, attemptId);
+});
+
+ipcMain.handle("paseo:browser:cancel-hibernation", (event, attemptId: unknown) => {
+  if (typeof attemptId !== "string" || !attemptId.trim())
+    throw new Error("Invalid hibernation attempt");
+  browserHibernationRequests.cancel(event.sender.id, attemptId);
 });
 
 ipcMain.handle("paseo:browser:register-attached", (event, rawInput: unknown) => {
