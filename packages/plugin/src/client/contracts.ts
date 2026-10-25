@@ -195,7 +195,26 @@ export interface PluginWorkspaceResources {
   setPolicy(policy: PluginWorkspaceBrowserPolicy): void;
 }
 
+export interface PluginComposerSuggestionInput {
+  /** Explicit connected host identity, as exposed by useHosts() or PluginHostProps.host.id. */
+  readonly serverId: string;
+  readonly agentId: string;
+  /** Non-empty text. Existing text (including whitespace) or attachments prevent showing and accepting. */
+  readonly text: string;
+}
+
+export type PluginComposerSuggestionResult =
+  | { readonly status: "suggested"; readonly remove: () => void }
+  | { readonly status: "draft-not-empty" | "composer-unavailable" | "submission-in-progress" };
+
+export interface PluginComposer {
+  /** Show faint text in an empty composer. Tab or Right Arrow accepts it as an editable draft. */
+  suggestText(input: PluginComposerSuggestionInput): Promise<PluginComposerSuggestionResult>;
+}
+
 export interface PluginClientContext extends PluginCommandCapabilities, PluginClientContextAliases {
+  /** Client-local capability. Absent in older Paseo apps; feature-detect before use. */
+  readonly composer?: PluginComposer;
   /** Electron only. Absent on hosts without browser hibernation. */
   readonly workspaceResources?: PluginWorkspaceResources;
   readonly i18n: import("./translations.js").PluginI18n;

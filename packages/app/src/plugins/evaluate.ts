@@ -103,6 +103,7 @@ function requireScreenTitle(screenId: string, title: unknown): PluginScreenTitle
 
 export type PluginClientRuntime = Pick<
   PluginClientContext,
+  | "composer"
   | "workspaceResources"
   | "i18n"
   | "playAudio"
