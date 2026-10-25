@@ -50,6 +50,10 @@ function tabIdentityKey(snapshot: Array<{ id: string }>): string {
   return JSON.stringify(snapshot.map(({ id }) => id));
 }
 
+function hasHorizontalOverflow(element: Element): boolean {
+  return element.scrollWidth > element.clientWidth;
+}
+
 test.beforeAll(async () => {
   workspace = await seedWorkspace({ repoPrefix: "launcher-e2e-" });
   const created = await workspace.client.createWorkspace({
@@ -71,6 +75,85 @@ test.afterAll(async () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.describe("Tab creation", () => {
+  test("mouse wheel over the tab strip selects adjacent tabs and stops at either end", async ({
+    page,
+  }) => {
+    await gotoWorkspace(page, workspace.workspaceId);
+    const row = page.getByTestId("workspace-tabs-row").filter({ visible: true }).first();
+    const tabs = row.locator("[aria-selected]");
+    await expect(tabs).toHaveCount(1);
+    await pressNewTabShortcut(page);
+    await expect(tabs).toHaveCount(2);
+    await pressNewTabShortcut(page);
+    await expect(tabs).toHaveCount(3);
+
+    await tabs.first().click();
+    await tabs.first().hover();
+    await page.mouse.wheel(0, 120);
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await page.mouse.wheel(0, 1200);
+    await expect(tabs.nth(2)).toHaveAttribute("aria-selected", "true");
+    await page.mouse.wheel(0, 120);
+    await expect(tabs.nth(2)).toHaveAttribute("aria-selected", "true");
+
+    await page.mouse.wheel(0, -120);
+    await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await page.mouse.wheel(0, -120);
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+    await page.mouse.wheel(0, -120);
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+
+    const ignoredEvents = await tabs.first().evaluate(async (element) => {
+      const events = [
+        new WheelEvent("wheel", { deltaX: 120, deltaY: 1, bubbles: true, cancelable: true }),
+        new WheelEvent("wheel", { deltaY: 120, ctrlKey: true, bubbles: true, cancelable: true }),
+        new WheelEvent("wheel", { deltaY: 120, metaKey: true, bubbles: true, cancelable: true }),
+        new WheelEvent("wheel", { deltaY: 120, shiftKey: true, bubbles: true, cancelable: true }),
+      ];
+      const allowed: boolean[] = [];
+      for (const event of events) {
+        allowed.push(element.dispatchEvent(event));
+      }
+      await new Promise(requestAnimationFrame);
+      return allowed;
+    });
+    expect(ignoredEvents).toEqual([true, true, true, true]);
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+    await page.getByTestId("workspace-new-tab-panel").filter({ visible: true }).hover();
+    await page.mouse.wheel(0, 120);
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("mouse wheel keeps overflowing tabs visible and preserves horizontal panning", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 900, height: 720 });
+    await gotoWorkspace(page, workspace.workspaceId);
+    const row = page.getByTestId("workspace-tabs-row").filter({ visible: true }).first();
+    const tabs = row.locator("[aria-selected]");
+    await expect(tabs).toHaveCount(1);
+    for (let count = 2; count <= 12; count++) {
+      await pressNewTabShortcut(page);
+      await expect(tabs).toHaveCount(count);
+    }
+
+    const scroll = row.getByTestId("workspace-tabs-scroll");
+    await expect.poll(() => scroll.evaluate(hasHorizontalOverflow)).toBe(true);
+    await tabs.first().click();
+    await tabs.first().hover();
+    await page.mouse.wheel(120, 0);
+    await expect(scroll).not.toHaveJSProperty("scrollLeft", 0);
+    await expect(tabs.first()).toHaveAttribute("aria-selected", "true");
+    await page.mouse.wheel(-1200, 0);
+    await expect(scroll).toHaveJSProperty("scrollLeft", 0);
+
+    for (let index = 1; index < 12; index++) {
+      await page.mouse.wheel(0, 120);
+      await expect(tabs.nth(index)).toHaveAttribute("aria-selected", "true");
+      await expect(tabs.nth(index)).toBeInViewport({ ratio: 1 });
+    }
+  });
+
   test("Cmd+T keeps creating a New tab after workspace switches", async ({ page }) => {
     if (!secondWorkspaceId) {
       throw new Error("Secondary workspace was not created");
