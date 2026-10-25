@@ -384,6 +384,33 @@ openBrowser({ url, workspaceId: remoteWorkspaceId, serverId: remoteServerId });
 `serverId` selects workspace ownership. The page runs on your local desktop, including
 for remote workspaces; `localhost` URLs refer to that desktop.
 
+#### Hibernate inactive workspace browsers
+
+`client.workspaceResources` is optional and available only in desktop builds that
+support browser hibernation. Check it once before offering hibernation settings:
+
+```ts
+const resources = client.workspaceResources;
+if (resources) {
+  resources.setPolicy({
+    workspaceId,
+    browserTabs: { hibernateAfterWorkspaceInactiveMs: 15 * 60_000 },
+  });
+}
+```
+
+The workspace belongs to the plugin installation's host. The timeout must be a safe
+integer of at least 1,000 milliseconds. Set it to `null` to remove this plugin's
+policy. Policies disappear when the plugin unloads; if several plugins configure
+the same workspace, the longest timeout applies.
+
+After the workspace is inactive for the timeout, unpinned browser tabs unload.
+Their tabs, URLs and browser profile remain. Selecting a sleeping tab or using it
+through browser automation reloads the page. Unsaved page state is discarded,
+including drafts and selected files; page unload warnings do not block hibernation.
+Use the browser toolbar's pin to keep a tab awake for the current app session.
+Sleeping tab icons and titles appear faded. Agent processes are unaffected.
+
 #### Errors and refusal
 
 | Condition                                                             | Result                                                                         |

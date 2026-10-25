@@ -92,6 +92,7 @@ import {
   useHorizontalScrollBoundary,
 } from "@/components/ui/horizontal-scroll-boundary";
 import { useSessionStore } from "@/stores/session-store";
+import { useBrowserHibernated } from "@/desktop/browser/hibernation";
 
 const DROPDOWN_WIDTH = 220;
 const DEFAULT_INLINE_ADD_BUTTON_RESERVED_WIDTH = 36;
@@ -665,6 +666,7 @@ function useMiddleClickClose(onClose: () => void) {
 
 function TabHandleContent({
   presentation,
+  isHibernated,
   isHighlighted,
   showLabel,
   backdrop,
@@ -673,6 +675,7 @@ function TabHandleContent({
   modifiedTestId,
 }: {
   presentation: WorkspaceTabPresentation;
+  isHibernated: boolean;
   isHighlighted: boolean;
   showLabel: boolean;
   backdrop: SurfaceBackdrop;
@@ -682,12 +685,18 @@ function TabHandleContent({
 }) {
   const { t } = useTranslation();
   const tabHandleDataSet = useMemo(
-    () => ({ statusBucket: presentation.statusBucket ?? "none" }),
-    [presentation.statusBucket],
+    () => ({
+      statusBucket: presentation.statusBucket ?? "none",
+      hibernated: isHibernated ? "true" : "false",
+    }),
+    [isHibernated, presentation.statusBucket],
   );
 
   return (
-    <View style={styles.tabHandle} dataSet={tabHandleDataSet}>
+    <View
+      style={[styles.tabHandle, isHibernated && styles.tabHibernated]}
+      dataSet={tabHandleDataSet}
+    >
       <View style={styles.tabIcon}>
         <WorkspaceTabIcon presentation={presentation} active={isHighlighted} backdrop={backdrop} />
       </View>
@@ -758,6 +767,12 @@ function TabChip({
 }) {
   const { closeButtonTestId, contextMenuTestId, menuEntries } = resolvedTab;
   const { t } = useTranslation();
+  const isHibernated = useBrowserHibernated(
+    tab.target.kind === "browser" ? tab.target.browserId : null,
+  );
+  const hibernatedSuffix = isHibernated ? ` · ${t("workspace.browser.hibernated")}` : "";
+  const tabAccessibilityLabel = `${accessibilityLabel}${hibernatedSuffix}`;
+  const tabTooltipLabel = `${tooltipLabel}${hibernatedSuffix}`;
   const openWith = useFilePanelOpenWithMenu(
     { serverId, workspaceId, tabId: tab.tabId },
     contextMenuTestId,
@@ -863,12 +878,13 @@ function TabChip({
               style={tabChipStyle}
               onPress={handleNavigateTab}
               accessibilityRole="button"
-              accessibilityLabel={accessibilityLabel}
+              accessibilityLabel={tabAccessibilityLabel}
               accessibilityState={tabAccessibilityState}
               aria-selected={isActive}
             >
               <TabHandleContent
                 presentation={presentation}
+                isHibernated={isHibernated}
                 isHighlighted={isHighlighted}
                 showLabel={showLabel}
                 backdrop={chipBackdrop}
@@ -892,7 +908,7 @@ function TabChip({
                 title={tooltipLabel}
               />
             ) : (
-              <Text style={styles.newTabTooltipText}>{tooltipLabel}</Text>
+              <Text style={styles.newTabTooltipText}>{tabTooltipLabel}</Text>
             )}
           </TooltipContent>
         </Tooltip>
@@ -1673,6 +1689,9 @@ const styles = StyleSheet.create((theme) => ({
     flex: 1,
     minWidth: 0,
     userSelect: "none",
+  },
+  tabHibernated: {
+    opacity: 0.5,
   },
   tabIcon: {
     width: TAB_ICON_WIDTH,
