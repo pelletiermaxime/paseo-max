@@ -145,6 +145,18 @@ export interface DesktopAttachedBrowserRegistration {
 }
 
 export interface DesktopBrowserBridge {
+  prepareHibernation?: (input: { browserId: string; attemptId: string }) => Promise<boolean>;
+  hibernate?: (attemptId: string) => Promise<void>;
+  cancelHibernation?: (attemptId: string) => Promise<void>;
+  onHibernated?: (
+    handler: (input: {
+      browserId: string;
+      webContentsId: number;
+      url: string;
+      title: string;
+    }) => void,
+  ) => () => void;
+  setWorkspaceVisibility?: (input: { workspaceId: string; visible: boolean }) => Promise<void>;
   setShortcutPolicy?: (input: BrowserKeyboardPolicy) => Promise<void>;
   readonly profilePartition?: string;
   registerAttachedBrowser?: (input: DesktopAttachedBrowserRegistration) => Promise<void>;
