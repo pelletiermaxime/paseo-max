@@ -57,17 +57,34 @@ jobs:
             throw new Error('Expected a numeric source run ID');
           }
           const tag = `paseo-max-v${process.env.BUILD_VERSION}`;
+          let sourceSha = process.env.GITHUB_SHA;
           const refs = JSON.parse(execFileSync('gh', ['api',
             `repos/${process.env.GITHUB_REPOSITORY}/git/matching-refs/tags/${tag}`], { encoding: 'utf8' }));
-          if (refs.some(ref => ref.ref === `refs/tags/${tag}`)) {
-            throw new Error(`${tag} already exists. Choose a new fork version; published builds are never overwritten.`);
-          }
           if (process.env.SOURCE_RUN_ID) {
             const run = JSON.parse(execFileSync('gh', ['api',
               `repos/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.SOURCE_RUN_ID}`], { encoding: 'utf8' }));
             if (run.conclusion !== 'success' || run.path !== '.github/workflows/paseo-max-linux.yml') {
               throw new Error('Promotion requires a successful Paseo Max Linux Build run');
             }
+            sourceSha = run.head_sha;
+          }
+          const ref = refs.find(ref => ref.ref === `refs/tags/${tag}`);
+          if (ref) {
+            let object = ref.object;
+            if (object.type === 'tag') {
+              object = JSON.parse(execFileSync('gh', ['api',
+                `repos/${process.env.GITHUB_REPOSITORY}/git/tags/${object.sha}`], { encoding: 'utf8' })).object;
+            }
+            if (object.type !== 'commit' || object.sha !== sourceSha) {
+              throw new Error(`${tag} points to a different commit; tags are never moved.`);
+            }
+          }
+          const [owner, name] = process.env.GITHUB_REPOSITORY.split('/');
+          const query = 'query($owner:String!,$name:String!,$tag:String!){repository(owner:$owner,name:$name){release(tagName:$tag){isDraft}}}';
+          const existing = JSON.parse(execFileSync('gh', ['api', 'graphql', '-f', `query=${query}`,
+            '-f', `owner=${owner}`, '-f', `name=${name}`, '-f', `tag=${tag}`], { encoding: 'utf8' }));
+          if (existing.data.repository.release !== null) {
+            throw new Error(`${tag} already has a release. Choose a new fork version; releases are never overwritten.`);
           }
           fs.appendFileSync(process.env.GITHUB_ENV, `RELEASE_TAG=${tag}\n`);
           NODE
@@ -128,7 +145,7 @@ jobs:
 
       - name: Download existing successful build
         if: inputs.source_run_id != ''
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ inputs.source_run_id }}
