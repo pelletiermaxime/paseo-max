@@ -86,7 +86,7 @@ jobs:
           if (existing.data.repository.release !== null) {
             throw new Error(`${tag} already has a release. Choose a new fork version; releases are never overwritten.`);
           }
-          fs.appendFileSync(process.env.GITHUB_ENV, `RELEASE_TAG=${tag}\n`);
+          fs.appendFileSync(process.env.GITHUB_ENV, `RELEASE_TAG=${tag}\nRELEASE_TAG_EXISTS=${Boolean(ref)}\n`);
           NODE
 
       - name: Install dependencies
@@ -194,8 +194,12 @@ jobs:
 
           Verify downloads with SHA256SUMS. BUILD.txt records the source and build run.
           EOF
+          if [ "$RELEASE_TAG_EXISTS" = false ]; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" \
+              -f ref="refs/tags/$RELEASE_TAG" -f sha="$RELEASE_SOURCE_SHA"
+          fi
           gh release create "$RELEASE_TAG" *.AppImage *.deb *.rpm *.tar.gz SHA256SUMS BUILD.txt \
-            --repo "$GITHUB_REPOSITORY" --target "$RELEASE_SOURCE_SHA" \
+            --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Paseo Max $BUILD_VERSION — Linux x64" \
             --notes-file "$RUNNER_TEMP/release-notes.md" --draft --prerelease --latest=false
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --json url,assets > "$RUNNER_TEMP/release.json"
