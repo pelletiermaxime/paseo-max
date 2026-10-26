@@ -11,6 +11,7 @@ export interface WorkspaceTabMenuLabels {
   copyTerminalId: string;
   copyFilePath: string;
   rename: string;
+  moveToRightSplit: string;
   closeAbove: string;
   closeBelow: string;
   closeLeft: string;
@@ -27,6 +28,7 @@ export const DEFAULT_WORKSPACE_TAB_MENU_LABELS: WorkspaceTabMenuLabels = {
   copyTerminalId: i18n.t("workspace.tabs.menu.copyTerminalId"),
   copyFilePath: i18n.t("workspace.tabs.menu.copyFilePath"),
   rename: i18n.t("workspace.tabs.menu.rename"),
+  moveToRightSplit: i18n.t("workspace.tabs.menu.moveToRightSplit"),
   closeAbove: i18n.t("workspace.tabs.menu.closeAbove"),
   closeBelow: i18n.t("workspace.tabs.menu.closeBelow"),
   closeLeft: i18n.t("workspace.tabs.menu.closeLeft"),
@@ -49,6 +51,7 @@ export type WorkspaceTabMenuEntry =
         | "arrow-right-to-line"
         | "copy-x"
         | "pencil"
+        | "columns-2"
         | "x";
       hint?: string;
       tooltip?: string;
@@ -83,6 +86,7 @@ interface BuildWorkspaceTabMenuEntriesInput {
   onCloseTabsBefore: (tabId: string) => Promise<void> | void;
   onCloseTabsAfter: (tabId: string) => Promise<void> | void;
   onCloseOtherTabs: (tabId: string) => Promise<void> | void;
+  onMoveTabToRightSplit?: (tabId: string) => void;
   labels?: WorkspaceTabMenuLabels;
 }
 
@@ -100,6 +104,7 @@ interface BuildWorkspaceDesktopTabActionsInput {
   onCloseTabsToLeft: (tabId: string) => Promise<void> | void;
   onCloseTabsToRight: (tabId: string) => Promise<void> | void;
   onCloseOtherTabs: (tabId: string) => Promise<void> | void;
+  onMoveTabToRightSplit?: (tabId: string) => void;
   labels?: WorkspaceTabMenuLabels;
 }
 
@@ -266,6 +271,19 @@ export function buildWorkspaceTabMenuEntries(
     });
   }
 
+  if (surface === "desktop" && input.onMoveTabToRightSplit) {
+    const onMoveTabToRightSplit = input.onMoveTabToRightSplit;
+    entries.push({
+      kind: "item",
+      key: "move-to-right-split",
+      label: labels.moveToRightSplit,
+      icon: "columns-2",
+      testID: `${menuTestIDBase}-move-to-right-split`,
+      onSelect: () => onMoveTabToRightSplit(tab.tabId),
+    });
+    entries.push({ kind: "separator", key: "split-separator" });
+  }
+
   entries.push({
     kind: "item",
     key: "close-before",
@@ -349,6 +367,7 @@ export function buildWorkspaceDesktopTabActions(
       onCloseTabsBefore: input.onCloseTabsToLeft,
       onCloseTabsAfter: input.onCloseTabsToRight,
       onCloseOtherTabs: input.onCloseOtherTabs,
+      onMoveTabToRightSplit: input.onMoveTabToRightSplit,
       labels: input.labels,
     }),
     closeButtonTestId: getCloseButtonTestId(input.tab),
