@@ -75,6 +75,57 @@ test.afterAll(async () => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 test.describe("Tab creation", () => {
+  test("the tab context menu moves an inactive tab into a persistent right split", async ({
+    page,
+    withWorkspace,
+  }, testInfo) => {
+    const isolatedWorkspace = await withWorkspace({ prefix: "tab-right-split-" });
+    await isolatedWorkspace.navigateTo();
+    const rows = page.getByTestId("workspace-tabs-row").filter({ visible: true });
+    await expect(rows).toHaveCount(1);
+    const tabs = rows.first().locator("[aria-selected]");
+    await page.getByTestId("workspace-new-tab-terminal").click();
+    await expectTerminalSurfaceVisible(page);
+    await expect(tabs).toHaveCount(1);
+    const movedTabTestId = await tabs.first().getAttribute("data-testid");
+    if (!movedTabTestId) throw new Error("Initial tab has no test ID");
+    const movedTab = page.getByTestId(movedTabTestId);
+    await movedTab.focus();
+    await pressNewTabShortcut(page);
+    await expect(tabs).toHaveCount(2);
+    await expect(movedTab).toHaveAttribute("aria-selected", "false");
+
+    await movedTab.click({ button: "right" });
+    const moveAction = page.getByRole("menuitem", { name: "Move to right split", exact: true });
+    await expect(moveAction).toBeVisible();
+    await page.screenshot({ path: testInfo.outputPath("tab-context-menu.png") });
+    await moveAction.click();
+
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0).locator("[aria-selected]")).toHaveCount(1);
+    await expect(rows.nth(1).getByTestId(movedTabTestId)).toHaveAttribute("aria-selected", "true");
+    await expect(movedTab).toHaveCount(1);
+    const leftBounds = await rows.nth(0).boundingBox();
+    const rightBounds = await rows.nth(1).boundingBox();
+    if (!leftBounds || !rightBounds) throw new Error("Split tab rows are not visible");
+    expect(rightBounds.x).toBeGreaterThanOrEqual(leftBounds.x + leftBounds.width);
+    await page.screenshot({ path: testInfo.outputPath("right-split.png") });
+
+    // A split from a maximized pane must reveal the destination as well as preserving its source.
+    await rows.nth(1).getByTestId("workspace-maximize-pane").click();
+    await expect(rows).toHaveCount(1);
+    await movedTab.click({ button: "right" });
+    await moveAction.click();
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(1).locator("[aria-selected]")).toHaveCount(1);
+    await expect(rows.nth(2).getByTestId(movedTabTestId)).toHaveAttribute("aria-selected", "true");
+    await expect(movedTab).toHaveCount(1);
+
+    await page.reload();
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(2).getByTestId(movedTabTestId)).toHaveAttribute("aria-selected", "true");
+  });
+
   test("mouse wheel over the tab strip selects adjacent tabs and stops at either end", async ({
     page,
   }) => {
