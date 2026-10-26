@@ -6,7 +6,7 @@ on:
       version:
         description: "Fork package version (for example 0.13.0-max.1)"
         required: true
-        default: "0.13.0-max.2"
+        default: "0.13.0-max.3"
         type: string
       source_run_id:
         description: "Promote an existing successful package artifact; leave blank for a fresh build"
@@ -182,6 +182,10 @@ jobs:
           cat > "$RUNNER_TEMP/release-notes.md" <<EOF
           Experimental Paseo Max desktop build, based on upstream Paseo v${BUILD_VERSION%-max.*}.
 
+          Desktop tab improvements:
+          - Scroll vertically over the workspace tab strip to select adjacent tabs, including overflowing tabs.
+          - Right-click a tab and choose "Move to right split" to move that tab into a new pane immediately to its right. This also works for inactive tabs and restores maximized panes before splitting.
+
           Included plugin capabilities:
           - Compact plugin icons in the fixed sidebar footer through addSidebarFooterIcon.
           - Faint composer suggestions through composer.suggestText, accepted with Tab or Right Arrow as editable drafts. Typing or Escape dismisses the suggestion; nothing is sent automatically.
@@ -194,7 +198,7 @@ jobs:
           Separate state: ~/.config/Paseo Max and ~/.paseo-max; daemon address 127.0.0.1:17678.
           Automatic updates and global paseo CLI installation are disabled.
 
-          The packaged-app smoke check passed (renderer/preload, bundled daemon, built-in plugins, CLI and terminal). Composer suggestion keyboard acceptance was verified separately in the web app. Full native mobile and packaged-app plugin user journeys were not replayed in this build.
+          The packaged-app smoke check passed (renderer/preload, bundled daemon, built-in plugins, CLI and terminal). Composer suggestion keyboard acceptance and workspace tab wheel/split behavior were verified separately in the web app. The right-split regression also verifies layout persistence after reload. Full native mobile and packaged-app plugin user journeys were not replayed in this build.
 
           Source commit: $RELEASE_SOURCE_SHA
           Build: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/${SOURCE_RUN_ID:-$GITHUB_RUN_ID}
