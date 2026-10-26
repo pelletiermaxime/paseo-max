@@ -620,6 +620,7 @@ export const ru: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "В спящем режиме",
       unavailable: {
         title: "Встроенный браузер доступен только в настольном приложении",
         subtitle:
@@ -632,6 +633,8 @@ export const ru: TranslationResources = {
         stopLoading: "Остановить загрузку",
         refresh: "Обновить",
         browserUrl: "URL браузера",
+        keepAwake: "Не переводить эту вкладку в спящий режим",
+        allowHibernation: "Разрешить спящий режим для этой вкладки",
         enterUrl: "Введите URL",
         openDevTools: "Открыть инструменты разработчика браузера",
         cancelSelector: "Отменить выбор элемента",
@@ -692,6 +695,7 @@ export const ru: TranslationResources = {
       },
       menu: {
         openFor: "Открыть меню для {{label}}",
+        moveToRightSplit: "Переместить в панель справа",
         copyResumeCommand: "Копировать команду продолжения",
         copyAgentId: "Скопировать идентификатор агента",
         copyTerminalId: "Скопировать идентификатор терминала",
