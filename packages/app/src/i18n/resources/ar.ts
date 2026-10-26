@@ -573,6 +573,7 @@ export const ar: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "في وضع السبات",
       unavailable: {
         title: "المتصفح مخصص لسطح المكتب فقط",
         subtitle: "افتح مساحة العمل هذه في Electron لاستخدام المتصفح المدمج.",
@@ -584,6 +585,8 @@ export const ar: TranslationResources = {
         stopLoading: "توقف عن التحميل",
         refresh: "ينعش",
         browserUrl: "متصفح URL",
+        keepAwake: "إبقاء علامة التبويب هذه نشطة",
+        allowHibernation: "السماح بإسبات علامة التبويب هذه",
         enterUrl: "أدخل URL",
         openDevTools: "افتح أدوات تطوير المتصفح",
         cancelSelector: "إلغاء محدد العنصر",
@@ -642,6 +645,7 @@ export const ar: TranslationResources = {
       },
       menu: {
         openFor: "فتح القائمة لـ{{label}}",
+        moveToRightSplit: "نقل إلى جزء منقسم على اليمين",
         copyResumeCommand: "نسخ أمر السيرة الذاتية",
         copyAgentId: "نسخ معرف الوكيل",
         copyTerminalId: "نسخ معرف المحطة",
