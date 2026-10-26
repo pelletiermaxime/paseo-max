@@ -605,6 +605,7 @@ export const ja: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "休止中",
       unavailable: {
         title: "ブラウザはデスクトップ専用です",
         subtitle: "組み込みブラウザを使用するには、このワークスペースをElectronで開いてください。",
@@ -616,6 +617,8 @@ export const ja: TranslationResources = {
         stopLoading: "読み込みを停止",
         refresh: "更新",
         browserUrl: "ブラウザURL",
+        keepAwake: "このタブをアクティブに保つ",
+        allowHibernation: "このタブの休止を許可",
         enterUrl: "URLを入力",
         openDevTools: "ブラウザ開発ツールを開く",
         cancelSelector: "要素セレクターをキャンセル",
@@ -675,6 +678,7 @@ export const ja: TranslationResources = {
       },
       menu: {
         openFor: "{{label}}のメニューを開く",
+        moveToRightSplit: "右の分割ペインに移動",
         copyResumeCommand: "再開コマンドをコピー",
         copyAgentId: "エージェントIDをコピー",
         copyTerminalId: "ターミナルIDをコピー",
