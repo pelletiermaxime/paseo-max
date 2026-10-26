@@ -613,6 +613,7 @@ export const ptBR: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "Em hibernação",
       unavailable: {
         title: "O navegador é exclusivo do desktop",
         subtitle: "Abra este workspace no Electron para usar o navegador integrado.",
@@ -624,6 +625,8 @@ export const ptBR: TranslationResources = {
         stopLoading: "Parar carregamento",
         refresh: "Atualizar",
         browserUrl: "URL do navegador",
+        keepAwake: "Manter esta aba ativa",
+        allowHibernation: "Permitir que esta aba hiberne",
         enterUrl: "Inserir URL",
         openDevTools: "Abrir ferramentas de desenvolvedor do navegador",
         cancelSelector: "Cancelar seletor de elemento",
@@ -683,6 +686,7 @@ export const ptBR: TranslationResources = {
       },
       menu: {
         openFor: "Abrir menu de {{label}}",
+        moveToRightSplit: "Mover para um painel à direita",
         copyResumeCommand: "Copiar comando de retomada",
         copyAgentId: "Copiar ID do agente",
         copyTerminalId: "Copiar ID do terminal",

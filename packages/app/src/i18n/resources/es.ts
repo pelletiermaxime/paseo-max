@@ -614,6 +614,7 @@ export const es: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "En hibernación",
       unavailable: {
         title: "El navegador es solo para escritorio",
         subtitle: "Abra este espacio de trabajo en Electron para usar el navegador integrado.",
@@ -625,6 +626,8 @@ export const es: TranslationResources = {
         stopLoading: "dejar de cargar",
         refresh: "Refrescar",
         browserUrl: "NavegadorURL",
+        keepAwake: "Mantener esta pestaña activa",
+        allowHibernation: "Permitir que esta pestaña hiberne",
         enterUrl: "IngreseURL",
         openDevTools: "Abrir herramientas de desarrollo del navegador",
         cancelSelector: "Cancelar selector de elementos",
@@ -684,6 +687,7 @@ export const es: TranslationResources = {
       },
       menu: {
         openFor: "Menú abierto para{{label}}",
+        moveToRightSplit: "Mover a un panel a la derecha",
         copyResumeCommand: "Copiar comando de reanudación",
         copyAgentId: "Copiar ID del agente",
         copyTerminalId: "Copiar ID del terminal",
