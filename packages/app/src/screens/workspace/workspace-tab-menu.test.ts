@@ -15,6 +15,38 @@ function createAgentTab(): WorkspaceTabDescriptor {
 }
 
 describe("buildWorkspaceTabMenuEntries", () => {
+  it("moves the context-menu tab to a right split when selected", () => {
+    const movedTabIds: string[] = [];
+    const tab = createAgentTab();
+    const actions = buildWorkspaceDesktopTabActions({
+      tab,
+      index: 0,
+      tabCount: 2,
+      onCopyResumeCommand: vi.fn(),
+      onCopyAgentId: vi.fn(),
+      onCopyTerminalId: vi.fn(),
+      onCopyFilePath: vi.fn(),
+      onReloadAgent: vi.fn(),
+      onRenameTab: vi.fn(),
+      onCloseTab: vi.fn(),
+      onCloseTabsToLeft: vi.fn(),
+      onCloseTabsToRight: vi.fn(),
+      onCloseOtherTabs: vi.fn(),
+      onMoveTabToRightSplit: (tabId) => movedTabIds.push(tabId),
+    });
+
+    const entry = actions.menuEntries.find((item) => item.key === "move-to-right-split");
+    expect(entry).toMatchObject({
+      kind: "item",
+      label: "Move to right split",
+      icon: "columns-2",
+      testID: `workspace-tab-context-${tab.tabId}-move-to-right-split`,
+    });
+    if (!entry || entry.kind !== "item") throw new Error("Right split entry missing");
+    entry.onSelect();
+    expect(movedTabIds).toEqual([tab.tabId]);
+  });
+
   it("uses desktop tab ordering labels for desktop menus", () => {
     const onCopyResumeCommand = vi.fn();
     const onCopyAgentId = vi.fn();
