@@ -660,7 +660,7 @@ const SplitPaneView = memo(function SplitPaneView({
   onCreateNewTab,
   buildPaneContentModel,
   onFocusPane,
-  onSplitPane: _onSplitPane,
+  onSplitPane,
   onSplitPaneEmpty,
   onReorderTabsInPane,
   activeDragTabId,
@@ -763,6 +763,13 @@ const SplitPaneView = memo(function SplitPaneView({
   const handleSplitDown = useCallback(
     () => onSplitPaneEmpty({ targetPaneId: paneId, position: "bottom" }),
     [onSplitPaneEmpty, paneId],
+  );
+  const handleMoveTabToRightSplit = useCallback(
+    (tabId: string) => {
+      if (paneId === maximizedPaneId) onTogglePaneMaximized(paneId);
+      onSplitPane({ tabId, targetPaneId: paneId, position: "right" });
+    },
+    [maximizedPaneId, onSplitPane, onTogglePaneMaximized, paneId],
   );
   const handleTogglePaneMaximized = useCallback(
     () => onTogglePaneMaximized(paneId),
@@ -869,6 +876,7 @@ const SplitPaneView = memo(function SplitPaneView({
                 onTogglePaneMaximized={handleTogglePaneMaximized}
                 onSplitRight={handleSplitRight}
                 onSplitDown={handleSplitDown}
+                onMoveTabToRightSplit={focusModeEnabled ? undefined : handleMoveTabToRightSplit}
                 focusModeEnabled={Boolean(focusModeEnabled)}
                 onExitFocusMode={onExitFocusMode}
               />
