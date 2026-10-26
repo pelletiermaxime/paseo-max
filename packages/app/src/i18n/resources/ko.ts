@@ -576,6 +576,7 @@ export const ko: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "절전 중",
       unavailable: {
         title: "브라우저는 데스크톱 전용입니다",
         subtitle: "내장 브라우저를 사용하려면 이 워크스페이스를 Electron에서 여세요.",
@@ -587,6 +588,8 @@ export const ko: TranslationResources = {
         stopLoading: "로딩 중지",
         refresh: "새로고침",
         browserUrl: "브라우저 URL",
+        keepAwake: "이 탭을 활성 상태로 유지",
+        allowHibernation: "이 탭의 절전 모드 허용",
         enterUrl: "URL 입력",
         openDevTools: "브라우저 개발자 도구 열기",
         cancelSelector: "요소 선택기 취소",
@@ -645,6 +648,7 @@ export const ko: TranslationResources = {
       },
       menu: {
         openFor: "{{label}}의 메뉴 열기",
+        moveToRightSplit: "오른쪽 분할 창으로 이동",
         copyResumeCommand: "재개 명령 복사",
         copyAgentId: "에이전트 ID 복사",
         copyTerminalId: "터미널 ID 복사",

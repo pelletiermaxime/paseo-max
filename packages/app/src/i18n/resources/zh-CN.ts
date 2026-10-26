@@ -575,6 +575,7 @@ export const zhCN: TranslationResources = {
       },
     },
     browser: {
+      hibernated: "已休眠",
       unavailable: {
         title: "浏览器仅桌面端可用",
         subtitle: "在 Electron 中打开此 workspace 以使用内置浏览器。",
@@ -586,6 +587,8 @@ export const zhCN: TranslationResources = {
         stopLoading: "停止加载",
         refresh: "刷新",
         browserUrl: "浏览器 URL",
+        keepAwake: "保持此标签页唤醒",
+        allowHibernation: "允许此标签页休眠",
         enterUrl: "输入 URL",
         openDevTools: "打开浏览器开发者工具",
         cancelSelector: "取消元素选择器",
@@ -644,6 +647,7 @@ export const zhCN: TranslationResources = {
       },
       menu: {
         openFor: "打开 {{label}} 的菜单",
+        moveToRightSplit: "移至右侧拆分窗格",
         copyResumeCommand: "复制恢复命令",
         copyAgentId: "复制 Agent ID",
         copyTerminalId: "复制 Terminal ID",

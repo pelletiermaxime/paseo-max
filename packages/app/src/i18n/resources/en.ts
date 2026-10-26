@@ -644,6 +644,7 @@ export const en = {
       },
       menu: {
         openFor: "Open menu for {{label}}",
+        moveToRightSplit: "Move to right split",
         copyResumeCommand: "Copy resume command",
         copyAgentId: "Copy agent id",
         copyTerminalId: "Copy terminal id",

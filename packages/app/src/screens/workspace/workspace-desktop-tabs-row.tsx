@@ -433,6 +433,8 @@ function TabContextMenuItem({
         return <ThemedArrowRightToLine size={16} uniProps={mutedColorMapping} />;
       case "copy-x":
         return <ThemedCopyX size={16} uniProps={mutedColorMapping} />;
+      case "columns-2":
+        return <ThemedColumns2 size={16} uniProps={mutedColorMapping} />;
       case "pencil":
         return <ThemedPencil size={16} uniProps={mutedColorMapping} />;
       case "x":
@@ -540,6 +542,7 @@ export interface WorkspaceDesktopTabsRowProps {
   onCloseTabsToLeft: (tabId: string) => Promise<void> | void;
   onCloseTabsToRight: (tabId: string) => Promise<void> | void;
   onCloseOtherTabs: (tabId: string) => Promise<void> | void;
+  onMoveTabToRightSplit?: (tabId: string) => void;
   onCreateNewTab: (input: { paneId?: string }) => void;
   onReorderTabs: (nextTabs: WorkspaceTabDescriptor[]) => void;
   externalDndContext?: boolean;
@@ -1054,6 +1057,7 @@ function ResolvedWorkspaceDesktopTabsRow({
   onCloseTabsToLeft,
   onCloseTabsToRight,
   onCloseOtherTabs,
+  onMoveTabToRightSplit,
   onCreateNewTab,
   onReorderTabs,
   externalDndContext = false,
@@ -1133,6 +1137,7 @@ function ResolvedWorkspaceDesktopTabsRow({
       copyTerminalId: t("workspace.tabs.menu.copyTerminalId"),
       copyFilePath: t("workspace.tabs.menu.copyFilePath"),
       rename: t("workspace.tabs.menu.rename"),
+      moveToRightSplit: t("workspace.tabs.menu.moveToRightSplit"),
       closeAbove: t("workspace.tabs.menu.closeAbove"),
       closeBelow: t("workspace.tabs.menu.closeBelow"),
       closeLeft: t("workspace.tabs.menu.closeLeft"),
@@ -1357,6 +1362,7 @@ function ResolvedWorkspaceDesktopTabsRow({
           onCloseTabsToLeft={onCloseTabsToLeft}
           onCloseTabsToRight={onCloseTabsToRight}
           onCloseOtherTabs={onCloseOtherTabs}
+          onMoveTabToRightSplit={onMoveTabToRightSplit}
           resolvedTabWidth={resolvedTabWidth}
           showLabel={showLabel}
           showCloseButton={shouldShowCloseButton}
@@ -1379,6 +1385,7 @@ function ResolvedWorkspaceDesktopTabsRow({
       normalizedServerId,
       normalizedWorkspaceId,
       onCloseOtherTabs,
+      onMoveTabToRightSplit,
       onCloseTab,
       onCloseTabsToLeft,
       onCloseTabsToRight,
@@ -1515,6 +1522,7 @@ function ResolvedDesktopTabChip({
   onCloseTabsToLeft,
   onCloseTabsToRight,
   onCloseOtherTabs,
+  onMoveTabToRightSplit,
   resolvedTabWidth,
   showLabel,
   showCloseButton,
@@ -1543,6 +1551,7 @@ function ResolvedDesktopTabChip({
   onCloseTabsToLeft: (tabId: string) => Promise<void> | void;
   onCloseTabsToRight: (tabId: string) => Promise<void> | void;
   onCloseOtherTabs: (tabId: string) => Promise<void> | void;
+  onMoveTabToRightSplit?: (tabId: string) => void;
   resolvedTabWidth: number;
   showLabel: boolean;
   showCloseButton: boolean;
@@ -1573,12 +1582,14 @@ function ResolvedDesktopTabChip({
         onCloseTabsToLeft,
         onCloseTabsToRight,
         onCloseOtherTabs,
+        onMoveTabToRightSplit,
         labels,
       }),
     [
       index,
       item.tab,
       onCloseOtherTabs,
+      onMoveTabToRightSplit,
       onCloseTab,
       onCloseTabsToLeft,
       onCloseTabsToRight,
