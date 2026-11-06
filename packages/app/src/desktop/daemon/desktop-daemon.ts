@@ -309,13 +309,14 @@ export async function closeLocalTransportSession(sessionId: string): Promise<voi
 
 export interface InstallStatus {
   installed: boolean;
+  supported?: boolean;
 }
 
 function parseInstallStatus(raw: unknown): InstallStatus {
   if (!isRecord(raw)) {
     throw new Error("Unexpected install status response.");
   }
-  return { installed: raw.installed === true };
+  return { installed: raw.installed === true, supported: raw.supported !== false };
 }
 
 export async function getCliInstallStatus(): Promise<InstallStatus> {
