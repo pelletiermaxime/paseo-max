@@ -45,6 +45,8 @@ vi.mock("electron", () => ({
   powerMonitor: { getSystemIdleTime: vi.fn(() => 0) },
 }));
 
+vi.mock("../fork-runtime.js", () => ({ isPaseoMax: true }));
+
 vi.mock("electron-log/main", () => ({
   default: {
     info: mocks.logInfo,
@@ -106,6 +108,17 @@ describe("daemon-manager commands", () => {
 
   afterEach(() => {
     rmSync(fixtureRoot, { recursive: true, force: true });
+  });
+
+  it("tells setup that global CLI installation is unavailable in Paseo Max", async () => {
+    const handlers = createDaemonCommandHandlers();
+    await expect(handlers.get_cli_install_status()).resolves.toEqual({
+      installed: false,
+      supported: false,
+    });
+    await expect(handlers.install_cli()).rejects.toThrow(
+      "Global CLI installation is disabled in Paseo Max.",
+    );
   });
 
   it("returns the Electron main-process log tail from electron-log", () => {

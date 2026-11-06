@@ -8,6 +8,7 @@ import { isPaseoMax } from "../../fork-runtime.js";
 
 interface InstallStatus {
   installed: boolean;
+  supported?: boolean;
 }
 
 async function pathOrSymlinkExists(p: string): Promise<boolean> {
@@ -96,7 +97,7 @@ async function isOwnInstall(targetPath: string): Promise<boolean> {
 }
 
 export async function getCliInstallStatus(): Promise<InstallStatus> {
-  if (isPaseoMax) return { installed: false };
+  if (isPaseoMax) return { installed: false, supported: false };
   const targetPath = getCliTargetPath();
   return { installed: await pathOrSymlinkExists(targetPath) };
 }

@@ -17,7 +17,7 @@ import {
 const CLI_INSTALL_STATUS_QUERY_KEY = ["desktop", "integrations", "cli-install-status"] as const;
 
 interface CliInstall {
-  /** False outside the desktop app: the CLI installs on the machine running the app. */
+  /** Available after the desktop app confirms it supports global CLI installation. */
   available: boolean;
   status: InstallStatus | null;
   isLoading: boolean;
@@ -35,15 +35,16 @@ export function useCliInstall(): CliInstall {
   const queryClient = useQueryClient();
   const reportError = useDesktopIpcErrorReporter();
   const toast = useToast();
-  const available = shouldUseDesktopDaemon();
+  const enabled = shouldUseDesktopDaemon();
 
   const statusQuery = useQuery<InstallStatus, Error>({
     queryKey: CLI_INSTALL_STATUS_QUERY_KEY,
     queryFn: getCliInstallStatus,
-    enabled: available,
+    enabled,
     retry: false,
   });
   const { data: installStatus, isLoading, refetch } = statusQuery;
+  const available = enabled && installStatus !== undefined && installStatus.supported !== false;
   useDesktopIpcQueryErrorToast({
     error: statusQuery.error,
     message: t("desktop.integrations.cli.statusFailed"),
@@ -73,8 +74,9 @@ export function useCliInstall(): CliInstall {
   // stays, and that still counts as done: the user is told rather than left with a switch that
   // silently won't turn off.
   const setInstalled = useCallback(
-    (installed: boolean) =>
-      mutateAsync(installed).then(
+    (installed: boolean) => {
+      if (!available) return Promise.resolve(false);
+      return mutateAsync(installed).then(
         (status) => {
           if (status.installed === installed) return true;
           if (installed) return false;
@@ -82,8 +84,9 @@ export function useCliInstall(): CliInstall {
           return true;
         },
         () => false,
-      ),
-    [mutateAsync, t, toast],
+      );
+    },
+    [available, mutateAsync, t, toast],
   );
   const refresh = useCallback(() => {
     void refetch();
