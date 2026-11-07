@@ -148,10 +148,6 @@ export const LeftSidebar = memo(function LeftSidebar({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const isCompactLayout = useIsCompactFormFactor();
-  const { items: footerItems } = useSidebarNavItems("footer");
-  const hasPluginIcons = footerItems.some(
-    (item) => item.visible && item.kind === "plugin" && item.group.kind === "icon",
-  );
   const showMobileAgent = usePanelStore((state) => state.showMobileAgent);
 
   const {
@@ -357,6 +353,10 @@ function SidebarFooter({
   const newAgentKeys = useShortcutKeys("new-agent");
   const settingsKeys = useShortcutKeys("toggle-settings");
   const isCompactLayout = useIsCompactFormFactor();
+  const { items: footerItems } = useSidebarNavItems("footer");
+  const hasPluginIcons = footerItems.some(
+    (item) => item.visible && item.kind === "plugin" && item.group.kind === "icon",
+  );
   const [rowWidth, setRowWidth] = useState(0);
   const handleRowLayout = useCallback((event: LayoutChangeEvent) => {
     setRowWidth(event.nativeEvent.layout.width);
